@@ -1,0 +1,192 @@
+/* ============================================
+   SECȚIUNEA STAGES OF CREATING A DOCUMENT
+
+   Layout: 2 coloane
+   - Stânga: titlu + lista INTERACTIVĂ cu 5 pași
+   - Dreapta: imagine care SE SCHIMBĂ la click
+
+   Cum funcționează animația:
+   - La click pe un pas, React re-rendează imaginea
+     (prin key={activeStep} pe container)
+   - CSS animația "fadeIn" se aplică la fiecare
+     re-rendare = efect de fade la schimbarea imaginii
+   ============================================ */
+
+/* --- Container principal (2 coloane) --- */
+.stages {
+  padding: var(--spacing-3xl) var(--spacing-2xl);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-3xl);
+  align-items: center;
+}
+
+/* --- Coloana stângă cu textul --- */
+.stages__content {
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- Titlul secțiunii --- */
+.stages__title {
+  font-family: var(--font-heading);
+  font-size: var(--text-3xl);
+  font-weight: 600;
+  font-style: italic;
+  color: var(--color-black);
+  margin-bottom: var(--spacing-2xl);
+  line-height: 1.3;
+}
+
+/* --- Lista cu pași --- */
+.stages__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);     /* Gap mic între pași */
+}
+
+/* --- Fiecare pas din listă (CLICKABLE) ---
+     Cursor pointer + hover effect + tranziție */
+.stages__step {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  cursor: pointer;             /* Arată că e clickable */
+  transition: all var(--transition-normal);
+  border-left: 3px solid transparent;  /* Border stânga invizibil (se colorează la activ) */
+}
+
+/* Efect hover pe pași - fundal ușor gri */
+.stages__step:hover {
+  background-color: var(--color-gray-100);
+}
+
+/* === PASUL ACTIV (selectat) ===
+     - Fundal ușor colorat
+     - Border stânga verde olive
+     - Numărul devine mai închis */
+.stages__step--active {
+  background-color: var(--color-accent-bg);  /* Fundal verde foarte deschis */
+  border-left-color: var(--color-accent);     /* Linia verde din stânga */
+}
+
+/* Numărul pasului activ - mai pronunțat */
+.stages__step--active .stages__step-number {
+  color: var(--color-primary);  /* Devine albastru închis */
+}
+
+/* Textul pasului activ - mai închis */
+.stages__step--active .stages__step-text {
+  color: var(--color-black);
+  font-weight: 500;
+}
+
+/* --- Numărul pasului (01, 02, etc.) --- */
+.stages__step-number {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--color-accent);
+  min-width: 30px;
+  transition: color var(--transition-fast);
+}
+
+/* --- Textul pasului --- */
+.stages__step-text {
+  font-size: var(--text-sm);
+  color: var(--color-gray-600);
+  line-height: 1.5;
+  transition: all var(--transition-fast);
+}
+
+/* --- Butonul "Create document" --- */
+.stages__button {
+  margin-top: var(--spacing-2xl);
+  padding: var(--spacing-md) var(--spacing-xl);
+  background-color: var(--color-accent-bg);
+  color: var(--color-black);
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  align-self: flex-start;
+  border: 2px solid var(--color-accent);
+  transition: all var(--transition-fast);
+}
+
+.stages__button:hover {
+  background-color: var(--color-accent);
+  color: var(--color-white);
+  transform: translateY(-2px);
+}
+
+/* --- Coloana dreaptă: Container imagine ---
+     Animația fadeIn se aplică la fiecare schimbare
+     de pas (key={activeStep} în React) */
+.stages__image {
+  width: 100%;
+  height: 400px;
+  background-color: var(--color-gray-100);
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--color-gray-200);
+  /* === ANIMAȚIE: fade in la fiecare schimbare de pas === */
+  animation: stageFadeIn 0.4s ease forwards;
+}
+
+/* Animație specifică pentru schimbarea imaginii */
+@keyframes stageFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.97);   /* Ușor micșorată la start */
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);      /* Revine la dimensiunea normală */
+  }
+}
+
+/* --- Placeholder imagine (conținutul din interiorul containerului) --- */
+.stages__image-placeholder {
+  width: 70%;
+  height: 75%;
+  border-radius: var(--radius-lg);
+  border: 2px solid var(--color-gray-200);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-md);
+  /* Tranziție lină a culorii de fundal */
+  transition: background-color var(--transition-normal);
+}
+
+/* --- Label-ul imaginii (descrierea pasului) --- */
+.stages__image-label {
+  font-size: var(--text-sm);
+  color: var(--color-gray-500);
+  font-weight: 500;
+  text-align: center;
+  padding: 0 var(--spacing-md);
+}
+
+/* --- Numărul mare al pasului din imagine --- */
+.stages__image-step-number {
+  font-family: var(--font-heading);
+  font-size: var(--text-4xl);
+  font-weight: 700;
+  color: rgba(0, 0, 0, 0.1);  /* Foarte transparent - fundal decorativ */
+}
+
+/* --- Responsive --- */
+@media (max-width: 768px) {
+  .stages {
+    grid-template-columns: 1fr;
+  }
+
+  .stages__image {
+    height: 300px;
+  }
+}

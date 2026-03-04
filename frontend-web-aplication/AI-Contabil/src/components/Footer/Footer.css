@@ -1,0 +1,59 @@
+/* ============================================
+   FOOTER - Partea de jos a paginii
+
+   Conține linkuri: Benefits, Specifications, How-to
+   + opțional un chat bubble icon
+   ============================================ */
+
+/* --- Container footer --- */
+.footer {
+  padding: var(--spacing-xl) var(--spacing-2xl);
+  border-top: 1px solid var(--color-gray-200);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* --- Linkurile din footer --- */
+.footer__links {
+  display: flex;
+  gap: var(--spacing-xl);
+}
+
+/* --- Fiecare link --- */
+.footer__link {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-gray-600);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.footer__link:hover {
+  color: var(--color-primary);
+}
+
+/* --- Butonul de chat (bubble verde) --- */
+.footer__chat {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-white);
+  cursor: pointer;
+  box-shadow: var(--shadow-lg);
+  transition: all var(--transition-fast);
+  /* Fixat în colțul din dreapta jos */
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 999;
+}
+
+.footer__chat:hover {
+  transform: scale(1.1);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+}

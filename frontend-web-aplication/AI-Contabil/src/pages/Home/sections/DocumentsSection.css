@@ -1,0 +1,125 @@
+/* ============================================
+   SECȚIUNEA DOCUMENTS
+
+   Afișează cele mai generate documente:
+   - Titlu + subtitlu
+   - Buton "Create document"
+   - Tabel cu 3 coloane de documente
+   - Fiecare coloană are nume + 6 rânduri cu check
+   ============================================ */
+
+/* --- Container principal --- */
+.documents {
+  padding: var(--spacing-3xl) var(--spacing-2xl);
+  text-align: center;
+  /* Separator sus */
+  border-top: 1px solid var(--color-gray-200);
+}
+
+/* --- Label mic "Document" deasupra titlului --- */
+.documents__label {
+  font-size: var(--text-sm);
+  color: var(--color-accent);
+  font-weight: 500;
+  margin-bottom: var(--spacing-sm);
+}
+
+/* --- Titlul principal --- */
+.documents__title {
+  font-family: var(--font-heading);
+  font-size: var(--text-3xl);
+  font-weight: 600;
+  color: var(--color-black);
+  margin-bottom: var(--spacing-md);
+}
+
+/* --- Subtitlul descriptiv --- */
+.documents__subtitle {
+  font-size: var(--text-sm);
+  color: var(--color-gray-500);
+  margin-bottom: var(--spacing-xl);
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* --- Butonul "Create document" --- */
+.documents__button {
+  padding: var(--spacing-sm) var(--spacing-xl);
+  background-color: var(--color-accent-bg);
+  color: var(--color-black);
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  margin-bottom: var(--spacing-2xl);
+  transition: all var(--transition-fast);
+}
+
+.documents__button:hover {
+  background-color: var(--color-accent);
+  color: var(--color-white);
+}
+
+/* --- Tabelul cu documente (3 coloane) --- */
+.documents__table {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  text-align: left;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/* --- Fiecare coloană din tabel --- */
+.documents__column {
+  border-right: 1px solid var(--color-gray-200);
+}
+
+/* Ultima coloană nu are border dreapta */
+.documents__column:last-child {
+  border-right: none;
+}
+
+/* --- Header-ul coloanei (numele documentului) --- */
+.documents__column-header {
+  padding: var(--spacing-lg);
+  font-weight: 700;
+  font-size: var(--text-sm);
+  border-bottom: 1px solid var(--color-gray-200);
+}
+
+/* --- Fiecare rând din coloană --- */
+.documents__row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-bottom: 1px solid var(--color-gray-100);
+  font-size: var(--text-xs);
+  color: var(--color-gray-500);
+}
+
+/* Ultimul rând nu are border */
+.documents__row:last-child {
+  border-bottom: none;
+}
+
+/* --- Iconița check (✓) din fiecare rând --- */
+.documents__check {
+  color: var(--color-black);
+  font-size: var(--text-sm);
+}
+
+/* --- Responsive --- */
+@media (max-width: 768px) {
+  .documents__table {
+    grid-template-columns: 1fr;  /* O singură coloană pe mobil */
+  }
+
+  .documents__column {
+    border-right: none;
+    border-bottom: 1px solid var(--color-gray-200);
+  }
+}

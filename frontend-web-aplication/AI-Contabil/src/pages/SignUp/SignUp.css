@@ -1,0 +1,154 @@
+/* ============================================
+   PAGINA DE ÎNREGISTRARE (SIGN UP)
+
+   Layout: Fundal negru cu un card alb centrat
+   Card-ul conține:
+   - Titlu "Hello !"
+   - 4 câmpuri (Name, Email, Contact number, Password)
+   - Buton "CREATE ACCOUNT"
+   - Link către Sign In
+   ============================================ */
+
+/* --- Fundalul paginii - negru pentru contrast --- */
+.signup-page {
+  min-height: 100vh;           /* Ocupă toată înălțimea ecranului */
+  background-color: #000000;   /* Fundal negru */
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- Container-ul principal care centrează cardul --- */
+.signup-page__content {
+  flex: 1;
+  display: flex;
+  justify-content: center;   /* Centrat orizontal */
+  align-items: center;        /* Centrat vertical */
+  padding: var(--spacing-2xl);
+}
+
+/* --- Cardul formularului de înregistrare --- */
+.signup-card {
+  background-color: var(--color-white);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-3xl) var(--spacing-4xl);
+  width: 100%;
+  max-width: 520px;          /* Lățime maximă a cardului */
+  /* Animație de apariție - cardul apare cu fade + scale */
+  animation: scaleIn 0.5s ease forwards;
+}
+
+/* --- Titlul "Hello !" --- */
+.signup-card__title {
+  font-family: var(--font-heading);
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  color: var(--color-primary);
+  text-align: center;
+  margin-bottom: var(--spacing-2xl);
+}
+
+/* --- Formularul cu câmpurile de input --- */
+.signup-card__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);     /* Spațiu între câmpuri */
+}
+
+/* --- Grupul unui câmp de input (iconiță + input) --- */
+.signup-card__input-group {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  background-color: var(--color-input-bg);
+  border-radius: var(--radius-full);
+  padding: var(--spacing-md) var(--spacing-lg);
+  box-shadow: var(--shadow-input);
+  transition: box-shadow var(--transition-fast);
+}
+
+/* La focus pe input, umbra devine mai pronunțată */
+.signup-card__input-group:focus-within {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* --- Iconița din stânga câmpului --- */
+.signup-card__input-icon {
+  color: var(--color-gray-400);
+  display: flex;
+  align-items: center;
+}
+
+/* --- Câmpul de input în sine --- */
+.signup-card__input {
+  flex: 1;                     /* Ocupă tot spațiul disponibil */
+  background: transparent;
+  font-size: var(--text-base);
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+/* Stilul placeholder-ului */
+.signup-card__input::placeholder {
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+/* --- Iconița ochi pentru afișare/ascundere parolă --- */
+.signup-card__password-toggle {
+  color: var(--color-gray-400);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: color var(--transition-fast);
+}
+
+.signup-card__password-toggle:hover {
+  color: var(--color-primary);
+}
+
+/* --- Butonul "CREATE ACCOUNT" --- */
+.signup-card__submit {
+  margin-top: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-2xl);
+  background-color: var(--color-primary);
+  color: var(--color-white);
+  border-radius: var(--radius-full);
+  font-size: var(--text-base);
+  font-weight: 600;
+  letter-spacing: 1px;
+  align-self: center;          /* Centrat orizontal */
+  transition: all var(--transition-fast);
+}
+
+/* Efect hover pe buton - se ridică ușor */
+.signup-card__submit:hover {
+  background-color: var(--color-primary-light);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+/* --- Link-ul "Already registered? Sign In" --- */
+.signup-card__footer {
+  text-align: center;
+  margin-top: var(--spacing-lg);
+  font-size: var(--text-sm);
+  color: var(--color-gray-500);
+}
+
+/* Textul "Already registered?" */
+.signup-card__footer-link {
+  color: var(--color-primary);
+  cursor: pointer;
+}
+
+/* Textul bold "Sign In" */
+.signup-card__footer-link--bold {
+  font-weight: 700;
+  color: var(--color-black);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.signup-card__footer-link--bold:hover {
+  color: var(--color-primary);
+}

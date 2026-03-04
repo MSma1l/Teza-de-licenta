@@ -1,0 +1,13 @@
+/* ============================================
+   APP.CSS - Stiluri pentru containerul principal
+
+   Conține stilurile wrapper-ului aplicației
+   și animațiile de tranziție între pagini.
+   ============================================ */
+
+/* --- Container-ul principal al aplicației --- */
+.app {
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;  /* Previne scroll orizontal la animații */
+}

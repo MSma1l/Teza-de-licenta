@@ -1,0 +1,145 @@
+/* ============================================
+   SECȚIUNEA ABOUT PROJECT
+
+   Conține:
+   - Titlu "About Project"
+   - Text descriptiv
+   - Subtitlu "The main laws in the field"
+   - Carduri cu legi într-un CAROUSEL ORIZONTAL
+     (se văd doar 2, restul cu scroll stânga-dreapta)
+   - Imagine cu ciocan de judecător
+   ============================================ */
+
+/* --- Container principal --- */
+.about {
+  padding: var(--spacing-3xl) var(--spacing-2xl);
+}
+
+/* --- Titlul "About Project" --- */
+.about__title {
+  font-family: var(--font-heading);
+  font-size: var(--text-3xl);
+  font-weight: 600;
+  color: var(--color-black);
+  margin-bottom: var(--spacing-md);
+}
+
+/* --- Textul descriptiv --- */
+.about__text {
+  font-size: var(--text-base);
+  color: var(--color-gray-500);
+  margin-bottom: var(--spacing-md);
+  max-width: 600px;
+}
+
+/* --- Subtitlul legilor --- */
+.about__subtitle {
+  font-size: var(--text-base);
+  color: var(--color-black);
+  font-weight: 500;
+  margin-bottom: var(--spacing-xl);
+}
+
+/* --- Separator orizontal --- */
+.about__divider {
+  width: 100%;
+  height: 1px;
+  background-color: var(--color-gray-200);
+  margin: var(--spacing-md) 0;
+}
+
+/* --- Container-ul CAROUSEL pentru carduri ---
+     Scroll orizontal: se văd doar 2 carduri,
+     restul apar la scroll stânga-dreapta */
+.about__laws {
+  display: flex;
+  gap: var(--spacing-xl);
+  margin-bottom: var(--spacing-3xl);
+
+  /* Scroll orizontal */
+  overflow-x: auto;
+  scroll-behavior: smooth;        /* Scroll lin (animat) */
+  scroll-snap-type: x mandatory;  /* Snap pe fiecare card */
+
+  /* Padding pentru a nu tăia primul/ultimul card */
+  padding: var(--spacing-md) var(--spacing-xs);
+
+  /* Scrollbar complet INVIZIBIL dar funcțional */
+  scrollbar-width: none;                   /* Firefox */
+  -ms-overflow-style: none;                /* IE/Edge */
+}
+
+/* Ascundem scrollbar-ul complet în Chrome/Safari */
+.about__laws::-webkit-scrollbar {
+  display: none;
+}
+
+/* --- Fiecare card de lege ---
+     Lățime fixă: ~48% din container = 2 carduri vizibile */
+.about__law-card {
+  flex: 0 0 46%;                /* Nu se micșorează, lățime fixă ~46% */
+  scroll-snap-align: start;      /* La scroll, se aliniază la start */
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-lg);
+  background-color: var(--color-gray-100);
+  border-radius: var(--radius-lg);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  cursor: grab;                  /* Cursor de tragere */
+}
+
+/* Efect hover - cardul se ridică ușor */
+.about__law-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+
+/* --- Iconița legii (mai mare acum) --- */
+.about__law-icon {
+  color: var(--color-black);
+  font-size: var(--text-2xl);
+  margin-bottom: var(--spacing-xs);
+}
+
+.about__law-icon svg {
+  font-size: 2rem;               /* Iconiță mai mare */
+}
+
+/* --- Titlul legii (mai mare) --- */
+.about__law-title {
+  font-size: var(--text-lg);      /* Mai mare: 18px în loc de 14px */
+  font-weight: 700;
+  color: var(--color-black);
+  text-decoration: underline;
+}
+
+/* --- Descrierea legii (mai mare) --- */
+.about__law-text {
+  font-size: var(--text-base);    /* Mai mare: 16px în loc de 12px */
+  color: var(--color-gray-500);
+  line-height: 1.6;
+}
+
+/* --- Imaginea cu ciocan de judecător --- */
+.about__image {
+  width: 100%;
+  height: 350px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, #1a4a8a 0%, #2a6ab0 50%, #8a6a2a 100%);
+  margin-bottom: var(--spacing-2xl);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-white);
+  font-size: var(--text-lg);
+  overflow: hidden;
+}
+
+/* --- Responsive --- */
+@media (max-width: 768px) {
+  /* Pe mobil, fiecare card ocupă 85% = vezi doar 1 card */
+  .about__law-card {
+    flex: 0 0 85%;
+  }
+}

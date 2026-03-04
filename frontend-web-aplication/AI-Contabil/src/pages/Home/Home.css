@@ -1,0 +1,26 @@
+/* ============================================
+   PAGINA HOME - Container principal
+
+   Această pagină asamblează toate secțiunile:
+   Hero, About, Stages, Documents, News, Connect
+
+   Are 2 variante:
+   1. Înainte de logare (isLoggedIn=false)
+      - Navbar cu Sign In / Sign Up
+   2. După logare (isLoggedIn=true)
+      - Navbar cu Notificări + Avatar
+   ============================================ */
+
+/* --- Container-ul paginii Home --- */
+.home-page {
+  min-height: 100vh;
+  background-color: var(--color-white);
+  /* Animație de intrare - fade in */
+  animation: fadeIn 0.6s ease forwards;
+}
+
+/* --- Container-ul pentru conținutul paginii --- */
+.home-page__content {
+  max-width: 1200px;
+  margin: 0 auto;
+}

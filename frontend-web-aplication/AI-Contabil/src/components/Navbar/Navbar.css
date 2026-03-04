@@ -1,0 +1,142 @@
+/* ============================================
+   NAVBAR - Bara de navigație
+   Conține logo-ul, linkurile de navigare și
+   butoanele de autentificare
+   ============================================ */
+
+/* --- Container-ul principal al navbar-ului --- */
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;  /* Logo stânga, butoane dreapta */
+  padding: var(--spacing-md) var(--spacing-2xl);
+  background-color: var(--color-white);
+  position: sticky;   /* Navbar rămâne fixat sus la scroll */
+  top: 0;
+  z-index: 1000;      /* Stă deasupra altor elemente */
+  border-bottom: 1px solid var(--color-gray-200);
+}
+
+/* --- Logo-ul aplicației --- */
+.navbar__logo {
+  font-family: var(--font-heading);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  color: var(--color-black);
+  cursor: pointer;
+}
+
+/* --- Container pentru linkurile de navigare (centru) --- */
+.navbar__links {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xl);  /* Spațiu între linkuri */
+}
+
+/* --- Fiecare link din navigare --- */
+.navbar__link {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-gray-600);
+  cursor: pointer;
+  position: relative;
+  padding: var(--spacing-xs) 0;
+  transition: color var(--transition-fast);
+}
+
+/* Efect hover pe linkuri - subliniere animată */
+.navbar__link::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background-color: var(--color-primary);
+  transition: width var(--transition-normal);
+}
+
+/* La hover, sublinierea se extinde */
+.navbar__link:hover {
+  color: var(--color-primary);
+}
+
+.navbar__link:hover::after {
+  width: 100%;
+}
+
+/* --- Container pentru butoanele din dreapta --- */
+.navbar__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+/* --- Buton Sign In (înainte de logare) --- */
+.navbar__btn--signin {
+  padding: var(--spacing-xs) var(--spacing-lg);
+  border-radius: var(--radius-full);
+  background-color: var(--color-primary);
+  color: var(--color-white);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  transition: background-color var(--transition-fast);
+}
+
+.navbar__btn--signin:hover {
+  background-color: var(--color-primary-light);
+}
+
+/* --- Buton Sign Up (înainte de logare) --- */
+.navbar__btn--signup {
+  padding: var(--spacing-xs) var(--spacing-lg);
+  border-radius: var(--radius-full);
+  background-color: var(--color-primary);
+  color: var(--color-white);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  transition: background-color var(--transition-fast);
+}
+
+.navbar__btn--signup:hover {
+  background-color: var(--color-primary-light);
+}
+
+/* --- Iconița de notificări (după logare) --- */
+.navbar__notification {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--color-gray-600);
+  transition: color var(--transition-fast);
+}
+
+.navbar__notification:hover {
+  color: var(--color-primary);
+}
+
+/* --- Avatarul utilizatorului (după logare) --- */
+.navbar__avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;            /* Cerc perfect */
+  background-color: var(--color-gray-300);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  overflow: hidden;
+  border: 2px solid var(--color-gray-200);
+  transition: border-color var(--transition-fast);
+}
+
+.navbar__avatar:hover {
+  border-color: var(--color-primary);
+}
+
+.navbar__avatar svg {
+  color: var(--color-gray-500);
+}
