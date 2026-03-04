@@ -1,0 +1,28 @@
+
+components/
+  animated-section.tsx              (mic, ramane flat)
+  custom-tab-bar/
+    index.tsx                       (componenta)
+    styles.ts                       (stiluri)
+  home/
+    header-section/
+      index.tsx
+      styles.ts
+    hero-banner/
+      index.tsx
+      styles.ts
+    about-project-section/
+      index.tsx
+      styles.ts
+    laws-section/
+      index.tsx
+      styles.ts
+    document-card/
+      index.tsx
+      styles.ts
+    documents-section/
+      index.tsx
+      styles.ts
+    image-placeholder/
+      index.tsx
+      styles.ts
