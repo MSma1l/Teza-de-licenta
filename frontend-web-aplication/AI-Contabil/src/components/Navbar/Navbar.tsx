@@ -58,8 +58,8 @@ const Navbar = ({ isLoggedIn = false, showNavLinks = true }: NavbarProps) => {
             <div className="navbar__notification">
               <NotificationsNoneIcon />
             </div>
-            {/* Avatarul utilizatorului */}
-            <div className="navbar__avatar">
+            {/* Avatarul utilizatorului - click duce la Settings */}
+            <div className="navbar__avatar" onClick={() => navigate('/settings')}>
               <PersonOutlineIcon fontSize="small" />
             </div>
           </>

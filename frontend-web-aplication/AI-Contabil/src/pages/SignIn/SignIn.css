@@ -1,22 +1,21 @@
 /* ============================================
    PAGINA DE LOGARE (SIGN IN)
 
-   Layout similar cu Sign Up dar cu mai puține câmpuri:
-   - Fundal negru
-   - Card centrat cu:
-     - Titlu "Hello !"
-     - Câmp combinat (Name, Email, Contact number)
-     - Câmp parolă
-     - Buton "SIGN IN"
-     - Link către Sign Up
+   Layout:
+   - Fundal gradient animat cu forme plutitoare
+   - Card centrat cu formular
    ============================================ */
 
-/* --- Fundalul paginii --- */
+/* --- Fundalul paginii - gradient animat --- */
 .signin-page {
   min-height: 100vh;
-  background-color: #000000;
+  background: linear-gradient(135deg, #0d1b2a, #1b2a4a, #162d3e, #0a1628);
+  background-size: 400% 400%;
+  animation: authGradientShift 15s ease infinite;
   display: flex;
   flex-direction: column;
+  position: relative;
+  overflow: hidden;
 }
 
 /* --- Container centrat --- */
@@ -26,17 +25,89 @@
   justify-content: center;
   align-items: center;
   padding: var(--spacing-2xl);
+  position: relative;
+  z-index: 1;
+}
+
+/* === FORME ANIMATE DE FUNDAL === */
+.signin-page__bg-shapes {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.signin-page__shape {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.35;
+}
+
+/* Forma 1 - cerc mare verde olive, stânga sus */
+.signin-page__shape--1 {
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, #8a9a6a, #6b7a4e);
+  top: -100px;
+  left: -100px;
+  animation: authFloat1 20s ease-in-out infinite;
+}
+
+/* Forma 2 - cerc mediu albastru, dreapta jos */
+.signin-page__shape--2 {
+  width: 350px;
+  height: 350px;
+  background: radial-gradient(circle, #2a5a6a, #1a3a4a);
+  bottom: -80px;
+  right: -80px;
+  animation: authFloat2 18s ease-in-out infinite;
+}
+
+/* Forma 3 - cerc mic turcoaz, centru dreapta */
+.signin-page__shape--3 {
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, #3a8a8a, #1a5a6a);
+  top: 40%;
+  right: 15%;
+  animation: authFloat3 22s ease-in-out infinite;
+}
+
+/* Forma 4 - cerc mic verde, stânga jos */
+.signin-page__shape--4 {
+  width: 180px;
+  height: 180px;
+  background: radial-gradient(circle, #a8b878, #8a9a6a);
+  bottom: 20%;
+  left: 10%;
+  animation: authFloat4 25s ease-in-out infinite;
+}
+
+/* Forma 5 - cerc mic albastru deschis, sus centru */
+.signin-page__shape--5 {
+  width: 150px;
+  height: 150px;
+  background: radial-gradient(circle, #4a7a8a, #2a5a6a);
+  top: 15%;
+  left: 55%;
+  animation: authFloat5 19s ease-in-out infinite;
 }
 
 /* --- Cardul formularului --- */
 .signin-card {
-  background-color: var(--color-white);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: var(--radius-lg);
   padding: var(--spacing-3xl) var(--spacing-4xl);
   width: 100%;
   max-width: 480px;
-  /* Animație de apariție */
+  position: relative;
+  z-index: 2;
   animation: scaleIn 0.5s ease forwards;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.3), 0 0 80px rgba(138, 154, 106, 0.08);
 }
 
 /* --- Titlul "Hello !" --- */
@@ -149,4 +220,52 @@
 
 .signin-card__footer-link--bold:hover {
   color: var(--color-primary);
+}
+
+/* ============================================
+   ANIMAȚII FUNDAL AUTH (shared cu SignUp)
+   ============================================ */
+
+/* Gradient shift lent */
+@keyframes authGradientShift {
+  0% { background-position: 0% 50%; }
+  25% { background-position: 50% 100%; }
+  50% { background-position: 100% 50%; }
+  75% { background-position: 50% 0%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Plutire forma 1 - mișcare lentă diagonală */
+@keyframes authFloat1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(60px, 40px) scale(1.1); }
+  50% { transform: translate(30px, 80px) scale(0.95); }
+  75% { transform: translate(-20px, 40px) scale(1.05); }
+}
+
+/* Plutire forma 2 - mișcare opusă */
+@keyframes authFloat2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(-50px, -30px) scale(1.05); }
+  50% { transform: translate(-20px, -70px) scale(1.1); }
+  75% { transform: translate(30px, -40px) scale(0.95); }
+}
+
+/* Plutire forma 3 - mișcare circulară */
+@keyframes authFloat3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-40px, 50px) scale(1.15); }
+  66% { transform: translate(40px, -30px) scale(0.9); }
+}
+
+/* Plutire forma 4 - mișcare verticală */
+@keyframes authFloat4 {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-60px) scale(1.1); }
+}
+
+/* Plutire forma 5 - mișcare orizontală */
+@keyframes authFloat5 {
+  0%, 100% { transform: translateX(0) scale(1); }
+  50% { transform: translateX(-50px) scale(1.08); }
 }

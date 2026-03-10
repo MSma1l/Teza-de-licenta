@@ -42,6 +42,15 @@ const SignIn = () => {
 
       {/* === CONȚINUT PRINCIPAL === */}
       <div className="signin-page__content">
+        {/* Elementele animate de fundal */}
+        <div className="signin-page__bg-shapes">
+          <div className="signin-page__shape signin-page__shape--1" />
+          <div className="signin-page__shape signin-page__shape--2" />
+          <div className="signin-page__shape signin-page__shape--3" />
+          <div className="signin-page__shape signin-page__shape--4" />
+          <div className="signin-page__shape signin-page__shape--5" />
+        </div>
+
         <div className="signin-card">
           {/* --- Titlu --- */}
           <h1 className="signin-card__title">Hello !</h1>

@@ -1,0 +1,157 @@
+/* ============================================
+   EDIT PROFILE - Secțiunea de editare profil
+
+   Layout:
+   - Titlu "Edit Profile"
+   - Formular (stânga) + Avatar (dreapta)
+   - Câmpuri cu label deasupra
+   - Email cu iconița de verificare
+   ============================================ */
+
+/* --- Container principal --- */
+.edit-profile {
+  padding: var(--spacing-xl) var(--spacing-2xl);
+  animation: fadeIn 0.3s ease forwards;
+}
+
+/* --- Titlul --- */
+.edit-profile__title {
+  font-family: var(--font-primary);
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  color: var(--color-black);
+  margin-bottom: var(--spacing-2xl);
+}
+
+/* --- Container formular + avatar --- */
+.edit-profile__content {
+  display: flex;
+  gap: var(--spacing-3xl);
+}
+
+/* --- Formularul --- */
+.edit-profile__form {
+  flex: 1;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+/* --- Un câmp din formular --- */
+.edit-profile__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+/* --- Label-ul câmpului --- */
+.edit-profile__label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-black);
+}
+
+/* --- Input-ul --- */
+.edit-profile__input {
+  padding: var(--spacing-md) var(--spacing-lg);
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
+  color: var(--color-gray-600);
+  background-color: var(--color-white);
+  transition: border-color var(--transition-fast);
+  width: 100%;
+}
+
+.edit-profile__input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(26, 58, 74, 0.1);
+}
+
+/* --- Wrapper pentru input cu iconița de verificare --- */
+.edit-profile__input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.edit-profile__input-wrapper .edit-profile__input {
+  padding-right: var(--spacing-3xl);
+}
+
+/* --- Iconița de verificare email --- */
+.edit-profile__verified-icon {
+  position: absolute;
+  right: var(--spacing-md);
+  color: #4caf50;
+  display: flex;
+  align-items: center;
+}
+
+.edit-profile__verified-icon svg {
+  font-size: 1.5rem;
+}
+
+/* --- Butonul de salvare --- */
+.edit-profile__save-btn {
+  margin-top: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-2xl);
+  background-color: var(--color-primary);
+  color: var(--color-white);
+  border-radius: var(--radius-full);
+  font-size: var(--text-base);
+  font-weight: 600;
+  align-self: flex-start;
+  transition: all var(--transition-fast);
+}
+
+.edit-profile__save-btn:hover {
+  background-color: var(--color-primary-light);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+/* --- Secțiunea avatar --- */
+.edit-profile__avatar-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+/* --- Cercul avatarului --- */
+.edit-profile__avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  border: 3px solid var(--color-black);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background-color: var(--color-gray-100);
+}
+
+.edit-profile__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.edit-profile__avatar-placeholder {
+  font-size: 3rem !important;
+  color: var(--color-black);
+}
+
+/* --- Link-ul "Edit profile photo" --- */
+.edit-profile__avatar-link {
+  font-size: var(--text-sm);
+  color: #1a73e8;
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+
+.edit-profile__avatar-link:hover {
+  opacity: 0.7;
+}

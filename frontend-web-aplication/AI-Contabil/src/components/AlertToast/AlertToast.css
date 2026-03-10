@@ -1,0 +1,208 @@
+/* ============================================
+   ALERT TOAST - Componenta de alertă
+
+   4 tipuri:
+   - Success: verde (#4caf50)
+   - Error: roșu (#ef5350)
+   - Warning: galben (#ffc107)
+   - Info: albastru/violet (#7c4dff)
+
+   Layout:
+   - Bară colorată pe stânga (4px)
+   - Fundal pastelat
+   - Iconița + titlu + mesaj
+   - Buton close
+   ============================================ */
+
+/* --- Container-ul alertei --- */
+.alert-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+  padding: var(--spacing-lg) var(--spacing-xl);
+  border-radius: var(--radius-md);
+  position: relative;
+  overflow: hidden;
+  max-width: 500px;
+  width: 100%;
+  box-shadow: var(--shadow-md);
+}
+
+/* --- Animație de intrare --- */
+.alert-toast--enter {
+  animation: toastSlideIn 0.3s ease forwards;
+}
+
+/* --- Animație de ieșire --- */
+.alert-toast--exit {
+  animation: toastSlideOut 0.3s ease forwards;
+}
+
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes toastSlideOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+}
+
+/* --- Bara colorată din stânga --- */
+.alert-toast__bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+}
+
+/* === TIPUL SUCCESS === */
+.alert-toast--success {
+  background-color: #e8f5e9;
+}
+
+.alert-toast--success .alert-toast__bar {
+  background-color: #4caf50;
+}
+
+.alert-toast--success .alert-toast__icon {
+  background-color: #4caf50;
+}
+
+.alert-toast--success .alert-toast__title {
+  color: #2e7d32;
+}
+
+/* === TIPUL ERROR === */
+.alert-toast--error {
+  background-color: #ffebee;
+}
+
+.alert-toast--error .alert-toast__bar {
+  background-color: #ef5350;
+}
+
+.alert-toast--error .alert-toast__icon {
+  background-color: #ef5350;
+}
+
+.alert-toast--error .alert-toast__title {
+  color: #c62828;
+}
+
+/* === TIPUL WARNING === */
+.alert-toast--warning {
+  background-color: #fff8e1;
+}
+
+.alert-toast--warning .alert-toast__bar {
+  background-color: #ffc107;
+}
+
+.alert-toast--warning .alert-toast__icon {
+  background-color: #ffc107;
+}
+
+.alert-toast--warning .alert-toast__title {
+  color: #e65100;
+}
+
+/* === TIPUL INFO === */
+.alert-toast--info {
+  background-color: #e8eaf6;
+}
+
+.alert-toast--info .alert-toast__bar {
+  background-color: #7c4dff;
+}
+
+.alert-toast--info .alert-toast__icon {
+  background-color: #7c4dff;
+}
+
+.alert-toast--info .alert-toast__title {
+  color: #283593;
+}
+
+/* --- Iconița --- */
+.alert-toast__icon {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.alert-toast__icon svg {
+  color: var(--color-white);
+  font-size: 1.3rem;
+}
+
+/* --- Conținutul --- */
+.alert-toast__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+/* --- Titlul alertei --- */
+.alert-toast__title {
+  font-size: var(--text-base);
+  font-weight: 700;
+  font-style: italic;
+}
+
+/* --- Mesajul alertei --- */
+.alert-toast__message {
+  font-size: var(--text-sm);
+  color: var(--color-gray-600);
+  line-height: 1.5;
+}
+
+/* --- Butonul de închidere --- */
+.alert-toast__close {
+  background: none;
+  padding: var(--spacing-xs);
+  color: var(--color-gray-400);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: color var(--transition-fast);
+}
+
+.alert-toast__close:hover {
+  color: var(--color-black);
+}
+
+.alert-toast__close svg {
+  font-size: 1.2rem;
+}
+
+/* === CONTAINER PENTRU TOAST-URI MULTIPLE === */
+.alert-toast-container {
+  position: fixed;
+  top: var(--spacing-xl);
+  right: var(--spacing-xl);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}

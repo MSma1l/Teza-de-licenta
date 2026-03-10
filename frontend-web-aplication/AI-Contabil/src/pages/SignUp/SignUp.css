@@ -1,40 +1,113 @@
 /* ============================================
    PAGINA DE ÎNREGISTRARE (SIGN UP)
 
-   Layout: Fundal negru cu un card alb centrat
-   Card-ul conține:
-   - Titlu "Hello !"
-   - 4 câmpuri (Name, Email, Contact number, Password)
-   - Buton "CREATE ACCOUNT"
-   - Link către Sign In
+   Layout:
+   - Fundal gradient animat cu forme plutitoare
+   - Card centrat cu formular
    ============================================ */
 
-/* --- Fundalul paginii - negru pentru contrast --- */
+/* --- Fundalul paginii - gradient animat --- */
 .signup-page {
-  min-height: 100vh;           /* Ocupă toată înălțimea ecranului */
-  background-color: #000000;   /* Fundal negru */
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0d1b2a, #1b2a4a, #162d3e, #0a1628);
+  background-size: 400% 400%;
+  animation: authGradientShift 15s ease infinite;
   display: flex;
   flex-direction: column;
+  position: relative;
+  overflow: hidden;
 }
 
-/* --- Container-ul principal care centrează cardul --- */
+/* --- Container centrat --- */
 .signup-page__content {
   flex: 1;
   display: flex;
-  justify-content: center;   /* Centrat orizontal */
-  align-items: center;        /* Centrat vertical */
+  justify-content: center;
+  align-items: center;
   padding: var(--spacing-2xl);
+  position: relative;
+  z-index: 1;
 }
 
-/* --- Cardul formularului de înregistrare --- */
+/* === FORME ANIMATE DE FUNDAL === */
+.signup-page__bg-shapes {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.signup-page__shape {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.35;
+}
+
+/* Forma 1 - cerc mare verde olive, dreapta sus */
+.signup-page__shape--1 {
+  width: 420px;
+  height: 420px;
+  background: radial-gradient(circle, #8a9a6a, #6b7a4e);
+  top: -120px;
+  right: -80px;
+  animation: authFloat2 20s ease-in-out infinite;
+}
+
+/* Forma 2 - cerc mediu albastru, stânga jos */
+.signup-page__shape--2 {
+  width: 380px;
+  height: 380px;
+  background: radial-gradient(circle, #2a5a6a, #1a3a4a);
+  bottom: -100px;
+  left: -100px;
+  animation: authFloat1 18s ease-in-out infinite;
+}
+
+/* Forma 3 - cerc mic turcoaz, centru stânga */
+.signup-page__shape--3 {
+  width: 220px;
+  height: 220px;
+  background: radial-gradient(circle, #3a8a8a, #1a5a6a);
+  top: 35%;
+  left: 12%;
+  animation: authFloat3 22s ease-in-out infinite;
+}
+
+/* Forma 4 - cerc mic verde, dreapta centru */
+.signup-page__shape--4 {
+  width: 170px;
+  height: 170px;
+  background: radial-gradient(circle, #a8b878, #8a9a6a);
+  top: 25%;
+  right: 15%;
+  animation: authFloat5 25s ease-in-out infinite;
+}
+
+/* Forma 5 - cerc mic albastru, jos centru */
+.signup-page__shape--5 {
+  width: 160px;
+  height: 160px;
+  background: radial-gradient(circle, #4a7a8a, #2a5a6a);
+  bottom: 15%;
+  left: 45%;
+  animation: authFloat4 19s ease-in-out infinite;
+}
+
+/* --- Cardul formularului --- */
 .signup-card {
-  background-color: var(--color-white);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: var(--radius-lg);
   padding: var(--spacing-3xl) var(--spacing-4xl);
   width: 100%;
-  max-width: 520px;          /* Lățime maximă a cardului */
-  /* Animație de apariție - cardul apare cu fade + scale */
+  max-width: 520px;
+  position: relative;
+  z-index: 2;
   animation: scaleIn 0.5s ease forwards;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.3), 0 0 80px rgba(138, 154, 106, 0.08);
 }
 
 /* --- Titlul "Hello !" --- */
@@ -51,7 +124,7 @@
 .signup-card__form {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-lg);     /* Spațiu între câmpuri */
+  gap: var(--spacing-lg);
 }
 
 /* --- Grupul unui câmp de input (iconiță + input) --- */
@@ -80,7 +153,7 @@
 
 /* --- Câmpul de input în sine --- */
 .signup-card__input {
-  flex: 1;                     /* Ocupă tot spațiul disponibil */
+  flex: 1;
   background: transparent;
   font-size: var(--text-base);
   color: var(--color-primary);
@@ -116,7 +189,7 @@
   font-size: var(--text-base);
   font-weight: 600;
   letter-spacing: 1px;
-  align-self: center;          /* Centrat orizontal */
+  align-self: center;
   transition: all var(--transition-fast);
 }
 
@@ -151,4 +224,46 @@
 
 .signup-card__footer-link--bold:hover {
   color: var(--color-primary);
+}
+
+/* ============================================
+   ANIMAȚII FUNDAL AUTH
+   ============================================ */
+
+@keyframes authGradientShift {
+  0% { background-position: 0% 50%; }
+  25% { background-position: 50% 100%; }
+  50% { background-position: 100% 50%; }
+  75% { background-position: 50% 0%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes authFloat1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(60px, 40px) scale(1.1); }
+  50% { transform: translate(30px, 80px) scale(0.95); }
+  75% { transform: translate(-20px, 40px) scale(1.05); }
+}
+
+@keyframes authFloat2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(-50px, -30px) scale(1.05); }
+  50% { transform: translate(-20px, -70px) scale(1.1); }
+  75% { transform: translate(30px, -40px) scale(0.95); }
+}
+
+@keyframes authFloat3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-40px, 50px) scale(1.15); }
+  66% { transform: translate(40px, -30px) scale(0.9); }
+}
+
+@keyframes authFloat4 {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-60px) scale(1.1); }
+}
+
+@keyframes authFloat5 {
+  0%, 100% { transform: translateX(0) scale(1); }
+  50% { transform: translateX(-50px) scale(1.08); }
 }

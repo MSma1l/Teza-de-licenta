@@ -1,0 +1,298 @@
+/* ============================================
+   SECURITY SETTINGS - Pagina de securitate
+
+   Layout:
+   - Secțiuni separate: Parolă, Documente, 2FA, Sesiuni
+   - Fiecare secțiune cu header + descriere + conținut
+   ============================================ */
+
+/* --- Container principal --- */
+.security-settings {
+  padding: var(--spacing-xl) var(--spacing-2xl);
+  animation: fadeIn 0.3s ease forwards;
+}
+
+/* --- Titlul paginii --- */
+.security-settings__title {
+  font-family: var(--font-primary);
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  color: var(--color-black);
+  margin-bottom: var(--spacing-2xl);
+}
+
+/* --- O secțiune --- */
+.security-settings__section {
+  margin-bottom: var(--spacing-2xl);
+  padding-bottom: var(--spacing-2xl);
+  border-bottom: 1px solid var(--color-gray-200);
+}
+
+.security-settings__section:last-child {
+  border-bottom: none;
+}
+
+/* --- Header-ul secțiunii --- */
+.security-settings__section-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+}
+
+.security-settings__section-header svg {
+  font-size: 1.4rem;
+  color: var(--color-primary);
+}
+
+.security-settings__section-title {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--color-black);
+}
+
+/* --- Descrierea secțiunii --- */
+.security-settings__section-desc {
+  font-size: var(--text-sm);
+  color: var(--color-gray-500);
+  margin-bottom: var(--spacing-lg);
+  line-height: 1.5;
+}
+
+/* --- Formularul de parole --- */
+.security-settings__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  max-width: 450px;
+}
+
+.security-settings__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.security-settings__label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-black);
+}
+
+.security-settings__input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.security-settings__input {
+  width: 100%;
+  padding: var(--spacing-md) var(--spacing-lg);
+  padding-right: var(--spacing-3xl);
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
+  color: var(--color-gray-600);
+  background-color: var(--color-white);
+  transition: border-color var(--transition-fast);
+}
+
+.security-settings__input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(26, 58, 74, 0.1);
+}
+
+.security-settings__toggle {
+  position: absolute;
+  right: var(--spacing-md);
+  color: var(--color-gray-400);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: color var(--transition-fast);
+}
+
+.security-settings__toggle:hover {
+  color: var(--color-primary);
+}
+
+/* --- Butonul de salvare --- */
+.security-settings__save-btn {
+  margin-top: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-2xl);
+  background-color: var(--color-primary);
+  color: var(--color-white);
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  align-self: flex-start;
+  transition: all var(--transition-fast);
+}
+
+.security-settings__save-btn:hover {
+  background-color: var(--color-primary-light);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+/* --- Carduri documente --- */
+.security-settings__documents {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.security-settings__doc-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-md) var(--spacing-lg);
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-md);
+  background-color: var(--color-white);
+}
+
+.security-settings__doc-info {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.security-settings__doc-info > svg {
+  color: var(--color-gray-400);
+  font-size: 1.5rem;
+}
+
+.security-settings__doc-name {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-black);
+}
+
+.security-settings__doc-status {
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+
+.security-settings__doc-status--pending {
+  color: var(--color-gray-400);
+}
+
+.security-settings__doc-status--verified {
+  color: #4caf50;
+}
+
+.security-settings__doc-status--expired {
+  color: #c62828;
+}
+
+/* --- Butonul upload --- */
+.security-settings__upload-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  background-color: var(--color-gray-100);
+  color: var(--color-gray-600);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  transition: all var(--transition-fast);
+}
+
+.security-settings__upload-btn:hover {
+  background-color: var(--color-gray-200);
+  color: var(--color-primary);
+}
+
+.security-settings__upload-btn svg {
+  font-size: 1.2rem;
+}
+
+/* --- Toggle 2FA --- */
+.security-settings__toggle-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.security-settings__toggle-label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-gray-600);
+}
+
+.security-settings__toggle-btn {
+  width: 48px;
+  height: 26px;
+  border-radius: 13px;
+  background-color: var(--color-gray-300);
+  position: relative;
+  transition: background-color var(--transition-fast);
+  padding: 0;
+}
+
+.security-settings__toggle-btn--active {
+  background-color: #4caf50;
+}
+
+.security-settings__toggle-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: var(--color-white);
+  transition: transform var(--transition-fast);
+  box-shadow: var(--shadow-sm);
+}
+
+.security-settings__toggle-btn--active .security-settings__toggle-knob {
+  transform: translateX(22px);
+}
+
+/* --- Sesiuni active --- */
+.security-settings__sessions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.security-settings__session-card {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-lg);
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-md);
+}
+
+.security-settings__session-card > svg {
+  color: var(--color-gray-400);
+  font-size: 1.5rem;
+}
+
+.security-settings__session-info {
+  flex: 1;
+}
+
+.security-settings__session-info h4 {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-black);
+}
+
+.security-settings__session-info span {
+  font-size: var(--text-xs);
+  color: var(--color-gray-400);
+}
+
+.security-settings__session-status {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: #4caf50;
+  padding: 2px 10px;
+  background-color: #e8f5e9;
+  border-radius: var(--radius-sm);
+}

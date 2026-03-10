@@ -45,6 +45,15 @@ const SignUp = () => {
 
       {/* === CONȚINUTUL PRINCIPAL - card centrat === */}
       <div className="signup-page__content">
+        {/* Elementele animate de fundal */}
+        <div className="signup-page__bg-shapes">
+          <div className="signup-page__shape signup-page__shape--1" />
+          <div className="signup-page__shape signup-page__shape--2" />
+          <div className="signup-page__shape signup-page__shape--3" />
+          <div className="signup-page__shape signup-page__shape--4" />
+          <div className="signup-page__shape signup-page__shape--5" />
+        </div>
+
         <div className="signup-card">
           {/* --- Titlul cardului --- */}
           <h1 className="signup-card__title">Hello !</h1>

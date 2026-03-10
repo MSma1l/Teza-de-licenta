@@ -20,6 +20,7 @@ import { Routes, Route, useLocation } from 'react-router-dom';
 import Home from './pages/Home/Home';
 import SignIn from './pages/SignIn/SignIn';
 import SignUp from './pages/SignUp/SignUp';
+import Settings from './pages/Settings/Settings';
 
 /* Stiluri specifice App-ului */
 import './App.css';
@@ -60,6 +61,12 @@ function App() {
         <Route
           path="/signup"
           element={<SignUp />}
+        />
+
+        {/* Ruta "/settings" - Pagina de SETĂRI (profil, notificări, securitate, help) */}
+        <Route
+          path="/settings"
+          element={<Settings />}
         />
       </Routes>
     </div>
