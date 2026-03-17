@@ -1,16 +1,8 @@
 /* ============================================
    PAGINA DE LOGARE (SIGN IN)
 
-   Această pagină permite utilizatorului să se
-   logheze în cont. Conține:
-   - Navbar cu butoane Sign In / Sign Up
-   - Card centrat cu formular de logare
-   - 2 câmpuri: Identificare + Password
-   - Buton "SIGN IN"
-   - Link către pagina de Sign Up
-
-   NOTĂ: Momentan este doar partea vizuală,
-   fără logică de autentificare.
+   Permite utilizatorului să se logheze în cont.
+   Conectat la backend-ul real prin AuthContext.
    ============================================ */
 
 import { useState } from 'react';
@@ -25,15 +17,44 @@ import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 /* Importăm Navbar */
 import Navbar from '../../components/Navbar/Navbar';
 
+/* Importăm AuthContext */
+import { useAuth } from '../../context/AuthContext';
+
 /* Importăm stilurile */
 import './SignIn.css';
 
 /* --- Componenta paginii de logare --- */
 const SignIn = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
-  /* State pentru toggle vizibilitate parolă */
+  /* State pentru câmpuri */
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  /* Handler pentru submit */
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (!username.trim() || !password.trim()) {
+      setError('Completează toate câmpurile');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await login({ username: username.trim(), password });
+      navigate('/home');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Eroare la autentificare');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="signin-page">
@@ -55,9 +76,12 @@ const SignIn = () => {
           {/* --- Titlu --- */}
           <h1 className="signin-card__title">Hello !</h1>
 
+          {/* --- Mesaj de eroare --- */}
+          {error && <p className="signin-card__error">{error}</p>}
+
           {/* --- Formular de logare --- */}
-          <form className="signin-card__form" onSubmit={(e) => e.preventDefault()}>
-            {/* Câmpul de identificare (Name, Email sau Contact number) */}
+          <form className="signin-card__form" onSubmit={handleSubmit}>
+            {/* Câmpul de identificare */}
             <div className="signin-card__input-group">
               <span className="signin-card__input-icon">
                 <PersonOutlineIcon />
@@ -66,6 +90,9 @@ const SignIn = () => {
                 type="text"
                 className="signin-card__input"
                 placeholder="Name, Email, Contact number"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                disabled={loading}
               />
             </div>
 
@@ -78,8 +105,10 @@ const SignIn = () => {
                 type={showPassword ? 'text' : 'password'}
                 className="signin-card__input"
                 placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
               />
-              {/* Buton ochi - toggle parolă vizibilă/ascunsă */}
               <span
                 className="signin-card__password-toggle"
                 onClick={() => setShowPassword(!showPassword)}
@@ -93,8 +122,8 @@ const SignIn = () => {
             </div>
 
             {/* Butonul de logare */}
-            <button type="submit" className="signin-card__submit">
-              SIGN IN
+            <button type="submit" className="signin-card__submit" disabled={loading}>
+              {loading ? 'SE CONECTEAZĂ...' : 'SIGN IN'}
             </button>
           </form>
 

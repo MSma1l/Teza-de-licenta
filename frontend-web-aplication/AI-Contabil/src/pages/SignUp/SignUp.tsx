@@ -1,16 +1,8 @@
 /* ============================================
    PAGINA DE ÎNREGISTRARE (SIGN UP)
 
-   Această pagină permite utilizatorului să-și
-   creeze un cont nou. Conține:
-   - Navbar cu butoane Sign In / Sign Up
-   - Card centrat cu formular de înregistrare
-   - 4 câmpuri: Name, Email, Contact number, Password
-   - Buton de creare cont
-   - Link către pagina de Sign In
-
-   NOTĂ: Momentan este doar partea vizuală,
-   fără logică de procesare a datelor.
+   Permite utilizatorului să-și creeze un cont nou.
+   Conectat la backend-ul real prin AuthContext.
    ============================================ */
 
 import { useState } from 'react';
@@ -27,23 +19,68 @@ import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 /* Importăm componenta Navbar */
 import Navbar from '../../components/Navbar/Navbar';
 
+/* Importăm AuthContext */
+import { useAuth } from '../../context/AuthContext';
+
 /* Importăm stilurile CSS ale paginii */
 import './SignUp.css';
 
 /* --- Componenta paginii de înregistrare --- */
 const SignUp = () => {
-  /* Hook pentru navigare programatică */
   const navigate = useNavigate();
+  const { register } = useAuth();
 
-  /* State pentru afișarea/ascunderea parolei */
+  /* State pentru câmpuri */
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  /* Handler pentru submit */
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (!username.trim() || !email.trim() || !password.trim()) {
+      setError('Completează toate câmpurile obligatorii');
+      return;
+    }
+
+    if (username.trim().length < 3) {
+      setError('Username-ul trebuie să aibă minim 3 caractere');
+      return;
+    }
+
+    if (password.length < 6) {
+      setError('Parola trebuie să aibă minim 6 caractere');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await register({
+        username: username.trim(),
+        email: email.trim(),
+        password,
+        phone: phone.trim() || undefined,
+      });
+      navigate('/signin');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Eroare la înregistrare');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="signup-page">
-      {/* === NAVBAR - fără linkuri de navigare, cu butoane auth === */}
+      {/* === NAVBAR === */}
       <Navbar isLoggedIn={false} showNavLinks={false} />
 
-      {/* === CONȚINUTUL PRINCIPAL - card centrat === */}
+      {/* === CONȚINUTUL PRINCIPAL === */}
       <div className="signup-page__content">
         {/* Elementele animate de fundal */}
         <div className="signup-page__bg-shapes">
@@ -58,9 +95,12 @@ const SignUp = () => {
           {/* --- Titlul cardului --- */}
           <h1 className="signup-card__title">Hello !</h1>
 
+          {/* --- Mesaj de eroare --- */}
+          {error && <p className="signup-card__error">{error}</p>}
+
           {/* --- Formularul de înregistrare --- */}
-          <form className="signup-card__form" onSubmit={(e) => e.preventDefault()}>
-            {/* Câmpul NUME - cu iconița de persoană */}
+          <form className="signup-card__form" onSubmit={handleSubmit}>
+            {/* Câmpul NUME */}
             <div className="signup-card__input-group">
               <span className="signup-card__input-icon">
                 <PersonOutlineIcon />
@@ -68,11 +108,14 @@ const SignUp = () => {
               <input
                 type="text"
                 className="signup-card__input"
-                placeholder="Name"
+                placeholder="Username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                disabled={loading}
               />
             </div>
 
-            {/* Câmpul EMAIL - cu iconița de email */}
+            {/* Câmpul EMAIL */}
             <div className="signup-card__input-group">
               <span className="signup-card__input-icon">
                 <EmailOutlinedIcon />
@@ -81,10 +124,13 @@ const SignUp = () => {
                 type="email"
                 className="signup-card__input"
                 placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
               />
             </div>
 
-            {/* Câmpul NUMĂR DE CONTACT - cu iconița de telefon */}
+            {/* Câmpul NUMĂR DE CONTACT */}
             <div className="signup-card__input-group">
               <span className="signup-card__input-icon">
                 <LocalPhoneOutlinedIcon />
@@ -93,10 +139,13 @@ const SignUp = () => {
                 type="tel"
                 className="signup-card__input"
                 placeholder="Contact number"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                disabled={loading}
               />
             </div>
 
-            {/* Câmpul PAROLĂ - cu iconița de lacăt + buton ochi */}
+            {/* Câmpul PAROLĂ */}
             <div className="signup-card__input-group">
               <span className="signup-card__input-icon">
                 <LockOutlinedIcon />
@@ -105,8 +154,10 @@ const SignUp = () => {
                 type={showPassword ? 'text' : 'password'}
                 className="signup-card__input"
                 placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
               />
-              {/* Buton pentru afișarea/ascunderea parolei */}
               <span
                 className="signup-card__password-toggle"
                 onClick={() => setShowPassword(!showPassword)}
@@ -120,12 +171,12 @@ const SignUp = () => {
             </div>
 
             {/* Butonul de creare cont */}
-            <button type="submit" className="signup-card__submit">
-              CREATE ACCOUNT
+            <button type="submit" className="signup-card__submit" disabled={loading}>
+              {loading ? 'SE CREEAZĂ...' : 'CREATE ACCOUNT'}
             </button>
           </form>
 
-          {/* --- Footer-ul cardului cu link către Sign In --- */}
+          {/* --- Footer-ul cardului --- */}
           <div className="signup-card__footer">
             <span className="signup-card__footer-link">
               Already registered?{' '}

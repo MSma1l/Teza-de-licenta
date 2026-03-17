@@ -1,80 +1,60 @@
 /* ============================================
    API - NOTIFICĂRI
 
-   Funcțiile placeholder pentru comunicarea
-   cu backend-ul pentru notificări.
-
-   NOTĂ: Momentan returnează date mock.
-   În viitor se vor conecta la backend real.
+   Funcțiile pentru comunicarea cu backend-ul
+   pentru notificări. Conectat la backend real.
    ============================================ */
 
 import type { Notification } from '../models/settingsTypes';
+import { apiRequest } from './apiClient';
 
-/* --- Date mock pentru notificări --- */
-const mockNotifications: Notification[] = [
-  {
-    id: '1',
-    title: 'Document procesat',
-    message: 'Documentul dumneavoastră a fost procesat cu succes și este gata pentru descărcare.',
-    date: 'oct.17, 01:55 PM',
-    type: 'info',
-    isRead: false,
-  },
-  {
-    id: '2',
-    title: 'Cerere aprobată',
-    message: 'Cererea pentru actul de proprietate a fost aprobată. Verificați detaliile.',
-    date: 'oct.17, 01:00 PM',
-    type: 'urgent',
-    isRead: false,
-  },
-  {
-    id: '3',
-    title: 'Actualizare sistem',
-    message: 'Sistemul va fi actualizat în data de 20 octombrie. Salvați documentele.',
-    date: 'oct.16, 02:05 PM',
-    type: 'warning',
-    isRead: true,
-  },
-  {
-    id: '4',
-    title: 'Document expirat',
-    message: 'Documentul de identitate expiră în 30 de zile. Vă rugăm să îl reînnoiți.',
-    date: 'oct.16, 01:45 PM',
-    type: 'urgent',
-    isRead: true,
-  },
-  {
-    id: '5',
-    title: 'Confirmare întâlnire',
-    message: 'Întâlnirea pentru semnarea documentelor a fost confirmată pentru 25 octombrie.',
-    date: 'oct.15, 10:30 AM',
-    type: 'info',
-    isRead: true,
-  },
-];
+/* --- Tipul din backend --- */
+interface BackendNotification {
+  id: string;
+  title: string;
+  message: string;
+  notification_type: string;
+  is_read: boolean;
+  created_at: string;
+}
+
+/* --- Convertește din format backend în format frontend --- */
+function toNotification(n: BackendNotification): Notification {
+  return {
+    id: n.id,
+    title: n.title,
+    message: n.message,
+    date: new Date(n.created_at).toLocaleDateString('ro-RO', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }),
+    type: n.notification_type as 'urgent' | 'info' | 'warning',
+    isRead: n.is_read,
+  };
+}
 
 /* --- Obține lista de notificări --- */
 export const fetchNotifications = async (): Promise<Notification[]> => {
-  // TODO: Înlocuiește cu apel real la API
-  // return await fetch('/api/notifications').then(res => res.json());
-  return mockNotifications;
+  const data = await apiRequest<{ notifications: BackendNotification[]; total: number }>('/notifications/');
+  return data.notifications.map(toNotification);
 };
 
 /* --- Marchează o notificare ca citită --- */
-export const markNotificationRead = async (_id: string): Promise<boolean> => {
-  // TODO: Înlocuiește cu apel real la API
+export const markNotificationRead = async (id: string): Promise<boolean> => {
+  await apiRequest(`/notifications/${id}/read`, { method: 'PUT' });
   return true;
 };
 
 /* --- Marchează toate notificările ca citite --- */
 export const markAllNotificationsRead = async (): Promise<boolean> => {
-  // TODO: Înlocuiește cu apel real la API
+  await apiRequest('/notifications/read-all', { method: 'PUT' });
   return true;
 };
 
 /* --- Șterge o notificare --- */
-export const deleteNotification = async (_id: string): Promise<boolean> => {
-  // TODO: Înlocuiește cu apel real la API
+export const deleteNotification = async (id: string): Promise<boolean> => {
+  await apiRequest(`/notifications/${id}`, { method: 'DELETE' });
   return true;
 };

@@ -1,63 +1,89 @@
 /* ============================================
    API - SETTINGS
 
-   Funcțiile placeholder pentru comunicarea
-   cu backend-ul pentru setările utilizatorului.
-
-   NOTĂ: Momentan returnează date mock.
-   În viitor se vor conecta la backend real.
+   Funcțiile pentru comunicarea cu backend-ul
+   pentru setările utilizatorului.
+   Conectat la backend-ul real.
    ============================================ */
 
 import type { UserProfile, PasswordChangeData, SecurityDocument } from '../models/settingsTypes';
+import { apiRequest, apiUpload } from './apiClient';
+import type { UserData } from './authApi';
 
-/* --- Date mock pentru profil --- */
-const mockProfile: UserProfile = {
-  name: '',
-  email: '',
-  contactNumber: '',
-  avatarUrl: '',
-};
-
-/* --- Date mock pentru documente securitate --- */
-const mockDocuments: SecurityDocument[] = [];
+/* --- Convertește UserData din backend în UserProfile pentru frontend --- */
+function toUserProfile(data: UserData): UserProfile {
+  return {
+    name: data.full_name || data.username,
+    email: data.email,
+    contactNumber: data.phone || '',
+    avatarUrl: data.avatar_url || '',
+  };
+}
 
 /* --- Obține datele profilului --- */
 export const fetchUserProfile = async (): Promise<UserProfile> => {
-  // TODO: Înlocuiește cu apel real la API
-  // return await fetch('/api/user/profile').then(res => res.json());
-  return mockProfile;
+  const data = await apiRequest<UserData>('/users/me');
+  return toUserProfile(data);
 };
 
 /* --- Actualizează datele profilului --- */
 export const updateUserProfile = async (data: Partial<UserProfile>): Promise<UserProfile> => {
-  // TODO: Înlocuiește cu apel real la API
-  // return await fetch('/api/user/profile', { method: 'PUT', body: JSON.stringify(data) }).then(res => res.json());
-  return { ...mockProfile, ...data };
+  const updated = await apiRequest<UserData>('/users/me', {
+    method: 'PUT',
+    body: {
+      full_name: data.name,
+      email: data.email,
+      phone: data.contactNumber,
+    },
+  });
+  return toUserProfile(updated);
 };
 
 /* --- Încarcă avatar nou --- */
-export const uploadAvatar = async (_file: File): Promise<string> => {
-  // TODO: Înlocuiește cu apel real la API
-  // const formData = new FormData(); formData.append('avatar', file);
-  // return await fetch('/api/user/avatar', { method: 'POST', body: formData }).then(res => res.json());
-  return '';
+export const uploadAvatar = async (file: File): Promise<string> => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const data = await apiUpload<UserData>('/users/me/avatar', formData);
+  return data.avatar_url || '';
 };
 
 /* --- Schimbă parola --- */
-export const changePassword = async (_data: PasswordChangeData): Promise<boolean> => {
-  // TODO: Înlocuiește cu apel real la API
-  // return await fetch('/api/user/password', { method: 'PUT', body: JSON.stringify(data) }).then(res => res.ok);
+export const changePassword = async (data: PasswordChangeData): Promise<boolean> => {
+  await apiRequest('/users/me/change-password', {
+    method: 'POST',
+    body: {
+      current_password: data.currentPassword,
+      new_password: data.newPassword,
+      confirm_password: data.confirmPassword,
+    },
+  });
   return true;
 };
 
 /* --- Obține documentele de securitate --- */
 export const fetchSecurityDocuments = async (): Promise<SecurityDocument[]> => {
-  // TODO: Înlocuiește cu apel real la API
-  return mockDocuments;
+  const data = await apiRequest<{ documents: SecurityDocument[]; total: number }>('/documents/?document_type=certificat');
+  return data.documents.map((doc) => ({
+    id: doc.id,
+    name: doc.name || '',
+    type: doc.type || '',
+    uploadedDate: doc.uploadedDate || '',
+    status: doc.status || 'pending',
+  }));
 };
 
 /* --- Încarcă un document nou --- */
-export const uploadSecurityDocument = async (_file: File, _type: string): Promise<SecurityDocument> => {
-  // TODO: Înlocuiește cu apel real la API
-  return { id: '', name: '', type: '', uploadedDate: '', status: 'pending' };
+export const uploadSecurityDocument = async (file: File, type: string): Promise<SecurityDocument> => {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('title', file.name);
+  formData.append('document_type', type);
+  const doc = await apiUpload<{ id: string; file_name: string; document_type: string; uploaded_at: string; status: string }>('/documents/upload', formData);
+  return {
+    id: doc.id,
+    name: doc.file_name,
+    type: doc.document_type,
+    uploadedDate: doc.uploaded_at,
+    status: 'pending',
+  };
 };

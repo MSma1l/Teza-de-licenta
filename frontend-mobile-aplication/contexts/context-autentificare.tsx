@@ -3,6 +3,14 @@ import { Utilizator } from '@/types/utilizator';
 import { DateLogare, DateInregistrare } from '@/types/autentificare';
 import { logareApi, inregistrareApi } from '@/lib/api/serviciu-autentificare';
 import { salveazaToken, citesteToken, stergeToken } from '@/lib/stocare/stocare-securizata';
+import { cerereApi } from '@/lib/api/client-api';
+
+interface DateUtilizatorBackend {
+  id: string;
+  username: string;
+  email: string;
+  phone: string | null;
+}
 
 interface ValoareContextAutentificare {
   utilizator: Utilizator | null;
@@ -34,12 +42,13 @@ export function FurnizorAutentificare({ children }: { children: React.ReactNode 
     try {
       const token = await citesteToken();
       if (token) {
-        // TODO: Verifica tokenul cu backend-ul si obtine datele utilizatorului
-        // Pentru moment, setam un utilizator mock daca exista token
+        /* Verifică token-ul cu backend-ul și obține datele utilizatorului */
+        const user = await cerereApi<DateUtilizatorBackend>('/auth/me', { token });
         setUtilizator({
-          id: '1',
-          numeUtilizator: 'Utilizator',
-          email: 'user@example.com',
+          id: user.id,
+          numeUtilizator: user.username,
+          email: user.email,
+          telefon: user.phone || undefined,
         });
       }
     } catch {
