@@ -1,0 +1,25 @@
+# Environment
+.env
+__pycache__/
+*.py[cod]
+
+# Models (downloaded, not committed)
+model_storage/bert_base/
+model_storage/classifier/
+model_storage/ner_extractor/
+model_storage/urgency_scorer/
+model_storage/embeddings/
+model_storage/faiss_index/
+
+# Training data
+training_data/
+
+# Storage
+storage/uploads/
+
+# Logs
+logs/
+
+# IDE
+.vscode/
+.idea/

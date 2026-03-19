@@ -5,8 +5,12 @@ from alembic import context
 from app.core.database import Base
 from app.core.config import settings
 
-# Import all models
-from app.models import user, document, report, notification, accountant_client  # noqa: F401
+# Import all models so they register with Base.metadata
+from app.models import (  # noqa: F401
+    user, document, report, notification, accountant_client,
+    company, extracted_field, recommendation, training_example,
+    model_version, audit_log, document_embedding,
+)
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)

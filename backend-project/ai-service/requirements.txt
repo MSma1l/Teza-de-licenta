@@ -1,0 +1,48 @@
+a # === Web Framework ===
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+
+# === Database ===
+sqlalchemy==2.0.36
+asyncpg==0.30.0
+alembic==1.14.1
+
+# === Authentication ===
+python-jose[cryptography]==3.3.0
+
+# === Configuration ===
+pydantic[email-validator]==2.10.4
+pydantic-settings==2.7.1
+python-dotenv==1.0.1
+python-multipart==0.0.19
+
+# === Encryption ===
+cryptography==44.0.0
+
+# === Background Tasks ===
+celery[redis]==5.4.0
+redis==5.2.1
+
+# === OCR ===
+paddlepaddle==2.6.2
+paddleocr==2.10.0
+opencv-python-headless==4.10.0.84
+Pillow==11.1.0
+PyMuPDF==1.25.3
+
+# === AI / ML (all LOCAL, no external APIs) ===
+torch==2.5.1
+transformers==4.47.1
+sentence-transformers==3.3.1
+faiss-cpu==1.9.0.post1
+scikit-learn==1.6.1
+numpy==2.2.1
+
+# === Logging ===
+loguru==0.7.3
+
+# === Rate Limiting ===
+slowapi==0.1.9
+
+# === Async Redis ===
+redis[hiredis]==5.2.1

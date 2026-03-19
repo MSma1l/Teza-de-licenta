@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: str = "http://localhost:5173,http://localhost:8081"
     UPLOAD_DIR: str = "storage/uploads"
     MAX_UPLOAD_SIZE_MB: int = 10
+    ENCRYPTION_KEY_DEFAULT: str = ""
 
     @property
     def allowed_origins_list(self) -> List[str]:

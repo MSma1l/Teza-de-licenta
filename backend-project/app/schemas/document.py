@@ -5,6 +5,7 @@ from datetime import datetime
 class DocumentResponse(BaseModel):
     id: str
     owner_id: str
+    company_id: str | None = None
     title: str
     description: str | None = None
     document_type: str
@@ -13,6 +14,10 @@ class DocumentResponse(BaseModel):
     file_size: int | None = None
     mime_type: str | None = None
     ocr_text: str | None = None
+    avg_ocr_confidence: float | None = None
+    has_flagged_fields: bool = False
+    document_type_confidence: float | None = None
+    urgency_score: float | None = None
     uploaded_at: datetime
     processed_at: datetime | None = None
     created_at: datetime

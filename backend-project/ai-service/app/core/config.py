@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     MODEL_STORAGE_PATH: str = "model_storage"
     TRAINING_DATA_PATH: str = "training_data"
     UPLOAD_DIR: str = "storage/uploads"
+    MAX_UPLOAD_SIZE_MB: int = 50
 
     @property
     def model_storage(self) -> Path:

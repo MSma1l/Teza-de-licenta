@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 
 import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
+import SchoolIcon from '@mui/icons-material/School';
 
 interface NavbarProps {
   isLoggedIn?: boolean;
@@ -29,6 +30,13 @@ const Navbar = ({ isLoggedIn = false, showNavLinks = true }: NavbarProps) => {
       <div className="flex items-center gap-4">
         {isLoggedIn ? (
           <>
+            <div
+              className="w-10 h-10 flex items-center justify-center cursor-pointer text-neutral-600 hover:text-primary transition-colors"
+              onClick={() => navigate('/training')}
+              title="Antrenare AI"
+            >
+              <SchoolIcon />
+            </div>
             <div className="w-10 h-10 flex items-center justify-center cursor-pointer text-neutral-600 hover:text-primary transition-colors">
               <NotificationsNoneIcon />
             </div>

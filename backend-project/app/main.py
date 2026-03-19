@@ -5,10 +5,14 @@ import os
 
 from app.core.config import settings
 from app.core.database import engine, Base
-from app.api.routes import auth, users, documents, reports, notifications
+from app.api.routes import auth, users, documents, reports, notifications, training
 
 # Import all models so they are registered with Base
-from app.models import user, document, report, notification, accountant_client  # noqa: F401
+from app.models import (  # noqa: F401
+    user, document, report, notification, accountant_client,
+    company, extracted_field, recommendation, training_example,
+    model_version, audit_log, document_embedding,
+)
 
 # Create tables (in production use Alembic migrations)
 Base.metadata.create_all(bind=engine)
@@ -39,6 +43,7 @@ app.include_router(users.router, prefix="/api")
 app.include_router(documents.router, prefix="/api")
 app.include_router(reports.router, prefix="/api")
 app.include_router(notifications.router, prefix="/api")
+app.include_router(training.router, prefix="/api")
 
 
 @app.get("/api/health")

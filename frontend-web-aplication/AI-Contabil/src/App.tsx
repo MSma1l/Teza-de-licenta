@@ -4,6 +4,7 @@ import Home from './pages/Home/Home';
 import SignIn from './pages/SignIn/SignIn';
 import SignUp from './pages/SignUp/SignUp';
 import Settings from './pages/Settings/Settings';
+import Training from './pages/Training/Training';
 
 import { useAuth } from './context/AuthContext';
 
@@ -27,6 +28,7 @@ function App() {
         <Route path="/signin" element={isLoggedIn ? <Navigate to="/home" /> : <SignIn />} />
         <Route path="/signup" element={isLoggedIn ? <Navigate to="/home" /> : <SignUp />} />
         <Route path="/settings" element={isLoggedIn ? <Settings /> : <Navigate to="/signin" />} />
+        <Route path="/training" element={isLoggedIn ? <Training /> : <Navigate to="/signin" />} />
       </Routes>
     </div>
   );

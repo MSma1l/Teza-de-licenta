@@ -11,6 +11,26 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ai_contabil -d ai_contabil_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: ai_contabil_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   backend:
     build: ./backend-project
@@ -22,13 +42,90 @@ services:
       DATABASE_URL: postgresql://ai_contabil:ai_contabil_pass@postgres:5432/ai_contabil_db
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev-secret-key-schimba-in-productie-1234567890abcdef}
       JWT_REFRESH_SECRET_KEY: ${JWT_REFRESH_SECRET_KEY:-dev-refresh-key-schimba-in-productie-abcdef1234567890}
+      JWT_ALGORITHM: HS256
       BACKEND_HOST: 0.0.0.0
       BACKEND_PORT: 3777
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:8081}
+      UPLOAD_DIR: storage/uploads
+      MAX_UPLOAD_SIZE_MB: 10
+      ENCRYPTION_KEY_DEFAULT: ${ENCRYPTION_KEY_DEFAULT:-JpNEkZlHthj+i2yn4lpUKcA5fcnp1JQUKzRHj5p3iEE=}
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     volumes:
       - ./backend-project/storage:/app/storage
 
+  ai-service:
+    build: ./backend-project/ai-service
+    container_name: ai_contabil_ai_service
+    restart: unless-stopped
+    ports:
+      - "3778:3778"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://ai_contabil:ai_contabil_pass@postgres:5432/ai_contabil_db
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev-secret-key-schimba-in-productie-1234567890abcdef}
+      JWT_ALGORITHM: HS256
+      ENCRYPTION_KEY_DEFAULT: ${ENCRYPTION_KEY_DEFAULT:-JpNEkZlHthj+i2yn4lpUKcA5fcnp1JQUKzRHj5p3iEE=}
+      AI_SERVICE_HOST: 0.0.0.0
+      AI_SERVICE_PORT: 3778
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:8081,http://localhost:3777}
+      MODEL_STORAGE_PATH: /app/model_storage
+      TRAINING_DATA_PATH: /app/training_data
+      UPLOAD_DIR: /app/storage/uploads
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      LOG_LEVEL: INFO
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ai_model_storage:/app/model_storage
+      - ai_training_data:/app/training_data
+      - ./backend-project/storage:/app/storage
+
+  celery-worker:
+    build: ./backend-project/ai-service
+    container_name: ai_contabil_celery_worker
+    restart: unless-stopped
+    command: celery -A app.tasks.celery_app worker --loglevel=info --concurrency=2
+    environment:
+      DATABASE_URL: postgresql+asyncpg://ai_contabil:ai_contabil_pass@postgres:5432/ai_contabil_db
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev-secret-key-schimba-in-productie-1234567890abcdef}
+      ENCRYPTION_KEY_DEFAULT: ${ENCRYPTION_KEY_DEFAULT:-JpNEkZlHthj+i2yn4lpUKcA5fcnp1JQUKzRHj5p3iEE=}
+      MODEL_STORAGE_PATH: /app/model_storage
+      TRAINING_DATA_PATH: /app/training_data
+      UPLOAD_DIR: /app/storage/uploads
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ai_model_storage:/app/model_storage
+      - ai_training_data:/app/training_data
+      - ./backend-project/storage:/app/storage
+
+  celery-beat:
+    build: ./backend-project/ai-service
+    container_name: ai_contabil_celery_beat
+    restart: unless-stopped
+    command: celery -A app.tasks.celery_app beat --loglevel=info
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+    depends_on:
+      redis:
+        condition: service_healthy
+
 volumes:
   postgres_data:
+  redis_data:
+  ai_model_storage:
+  ai_training_data:
