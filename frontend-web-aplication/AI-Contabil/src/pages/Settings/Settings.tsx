@@ -30,9 +30,6 @@ import HelpFaq from './sections/HelpFaq';
 /* Importăm tipurile */
 import type { SettingsSection } from '../../models/settingsTypes';
 
-/* Importăm stilurile */
-import './Settings.css';
-
 /* --- Componenta Settings --- */
 const Settings = () => {
   /* State pentru secțiunea activă din sidebar */
@@ -55,12 +52,12 @@ const Settings = () => {
   };
 
   return (
-    <div className="settings-page">
+    <div className="min-h-screen bg-white flex flex-col">
       {/* === NAVBAR - logat, fără linkuri navigare === */}
       <Navbar isLoggedIn={true} showNavLinks={false} />
 
       {/* === CONȚINUT PRINCIPAL (Sidebar + Secțiune) === */}
-      <div className="settings-page__content">
+      <div className="flex-1 flex max-w-[1200px] mx-auto w-full bg-white border-x border-neutral-200">
         {/* Sidebar-ul din stânga */}
         <SettingsSidebar
           activeSection={activeSection}
@@ -68,7 +65,7 @@ const Settings = () => {
         />
 
         {/* Secțiunea activă din dreapta */}
-        <main className="settings-page__main">
+        <main className="flex-1 overflow-y-auto min-h-[calc(100vh-65px)]">
           {renderSection()}
         </main>
       </div>

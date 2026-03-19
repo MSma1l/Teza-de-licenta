@@ -1,83 +1,50 @@
-/* ============================================
-   COMPONENTA NAVBAR
-
-   Bara de navigație afișează:
-   - Logo-ul aplicației (stânga)
-   - Linkurile de navigare (centru) - doar pe pagina Home
-   - Butoane Sign In / Sign Up (dreapta) - înainte de logare
-   - Iconiță notificări + Avatar (dreapta) - după logare
-
-   Props:
-   - isLoggedIn: boolean - determină ce se afișează în dreapta
-   - showNavLinks: boolean - determină dacă se afișează linkurile
-   ============================================ */
-
 import { useNavigate } from 'react-router-dom';
 
-/* Importăm iconițe Material UI */
 import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 
-/* Importăm stilurile CSS ale navbar-ului */
-import './Navbar.css';
-
-/* --- Tipul props-urilor componentei --- */
 interface NavbarProps {
-  isLoggedIn?: boolean;      /* Este utilizatorul logat? */
-  showNavLinks?: boolean;    /* Afișăm linkurile de navigare? */
+  isLoggedIn?: boolean;
+  showNavLinks?: boolean;
 }
 
-/* --- Componenta Navbar --- */
 const Navbar = ({ isLoggedIn = false, showNavLinks = true }: NavbarProps) => {
-  /* Hook pentru navigare între pagini */
   const navigate = useNavigate();
 
   return (
-    <nav className="navbar">
-      {/* === LOGO - întotdeauna vizibil, click duce la pagina principală === */}
-      <div className="navbar__logo" onClick={() => navigate('/')}>
+    <nav className="flex items-center justify-between px-12 py-4 bg-white sticky top-0 z-[1000] border-b border-neutral-200">
+      <div className="font-heading text-xl font-bold text-neutral-black cursor-pointer" onClick={() => navigate('/')}>
         Logo
       </div>
 
-      {/* === LINKURI DE NAVIGARE - afișate doar pe pagina Home === */}
       {showNavLinks && (
-        <div className="navbar__links">
-          <span className="navbar__link">About</span>
-          <span className="navbar__link">Documnets</span>
-          <span className="navbar__link">Editing</span>
-          <span className="navbar__link">Contact Us</span>
+        <div className="flex items-center gap-8">
+          <span className="text-sm font-medium text-neutral-600 cursor-pointer relative py-1 hover:text-primary transition-colors after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-primary after:transition-all hover:after:w-full">About</span>
+          <span className="text-sm font-medium text-neutral-600 cursor-pointer relative py-1 hover:text-primary transition-colors after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-primary after:transition-all hover:after:w-full">Documnets</span>
+          <span className="text-sm font-medium text-neutral-600 cursor-pointer relative py-1 hover:text-primary transition-colors after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-primary after:transition-all hover:after:w-full">Editing</span>
+          <span className="text-sm font-medium text-neutral-600 cursor-pointer relative py-1 hover:text-primary transition-colors after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-primary after:transition-all hover:after:w-full">Contact Us</span>
         </div>
       )}
 
-      {/* === ACȚIUNI DIN DREAPTA === */}
-      <div className="navbar__actions">
+      <div className="flex items-center gap-4">
         {isLoggedIn ? (
-          /* --- După logare: notificări + avatar --- */
           <>
-            {/* Iconița de notificări */}
-            <div className="navbar__notification">
+            <div className="w-10 h-10 flex items-center justify-center cursor-pointer text-neutral-600 hover:text-primary transition-colors">
               <NotificationsNoneIcon />
             </div>
-            {/* Avatarul utilizatorului - click duce la Settings */}
-            <div className="navbar__avatar" onClick={() => navigate('/settings')}>
+            <div
+              className="w-9 h-9 rounded-full bg-neutral-300 flex items-center justify-center cursor-pointer overflow-hidden border-2 border-neutral-200 hover:border-primary transition-colors [&_svg]:text-neutral-500"
+              onClick={() => navigate('/settings')}
+            >
               <PersonOutlineIcon fontSize="small" />
             </div>
           </>
         ) : (
-          /* --- Înainte de logare: butoane Sign In și Sign Up --- */
           <>
-            {/* Butonul Sign In - duce la pagina de logare */}
-            <button
-              className="navbar__btn--signin"
-              onClick={() => navigate('/signin')}
-            >
+            <button className="py-1 px-6 rounded-full bg-primary text-white text-sm font-medium hover:bg-primary-light transition-colors" onClick={() => navigate('/signin')}>
               Sign In &gt;
             </button>
-            {/* Butonul Sign Up - duce la pagina de înregistrare */}
-            <button
-              className="navbar__btn--signup"
-              onClick={() => navigate('/signup')}
-            >
+            <button className="py-1 px-6 rounded-full bg-primary text-white text-sm font-medium hover:bg-primary-light transition-colors" onClick={() => navigate('/signup')}>
               Sign up &gt;
             </button>
           </>

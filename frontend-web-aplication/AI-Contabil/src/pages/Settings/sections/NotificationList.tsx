@@ -22,9 +22,6 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import type { Notification } from '../../../models/settingsTypes';
 import { fetchNotifications } from '../../../api/notificationsApi';
 
-/* Importăm stilurile */
-import './NotificationList.css';
-
 /* --- Componenta NotificationList --- */
 const NotificationList = () => {
   /* State pentru notificări */
@@ -50,19 +47,19 @@ const NotificationList = () => {
   );
 
   return (
-    <div className="notification-list">
+    <div className="p-8 px-12 animate-fade-in">
       {/* === Header cu iconița + titlu === */}
-      <div className="notification-list__header">
-        <NotificationsNoneOutlinedIcon className="notification-list__header-icon" />
-        <h1 className="notification-list__title">Notification</h1>
+      <div className="flex items-center gap-3 mb-8">
+        <NotificationsNoneOutlinedIcon className="!text-[2rem] text-neutral-black" />
+        <h1 className="font-heading text-2xl font-bold text-neutral-black">Notification</h1>
       </div>
 
       {/* === Câmpul de căutare === */}
-      <div className="notification-list__search">
-        <SearchIcon className="notification-list__search-icon" />
+      <div className="flex items-center gap-2 bg-neutral-200 rounded-lg py-2 px-3 mb-8 max-w-[500px]">
+        <SearchIcon className="!text-[1.2rem] text-neutral-400" />
         <input
           type="text"
-          className="notification-list__search-input"
+          className="flex-1 bg-transparent text-sm text-neutral-black placeholder:text-neutral-400 focus:outline-none"
           placeholder="Search"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
@@ -70,42 +67,42 @@ const NotificationList = () => {
       </div>
 
       {/* === Lista de notificări === */}
-      <div className="notification-list__items">
+      <div className="flex flex-col gap-3">
         {filteredNotifications.length > 0 ? (
           filteredNotifications.map((notif) => (
             <div
               key={notif.id}
-              className={`notification-card ${
-                !notif.isRead ? 'notification-card--unread' : ''
+              className={`flex gap-3 p-6 border border-neutral-200 rounded-lg bg-white transition-shadow duration-200 cursor-pointer hover:shadow-sm ${
+                !notif.isRead ? 'border-l-3 border-l-primary' : ''
               }`}
             >
               {/* Iconița info */}
-              <div className="notification-card__icon">
+              <div className="flex items-start pt-0.5 [&_svg]:text-2xl [&_svg]:text-[#26c6da]">
                 <InfoOutlinedIcon />
               </div>
 
               {/* Conținutul notificării */}
-              <div className="notification-card__content">
-                <div className="notification-card__top">
-                  <h3 className="notification-card__title">{notif.title}</h3>
+              <div className="flex-1 flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-bold text-neutral-black">{notif.title}</h3>
                   {notif.type === 'urgent' && (
-                    <span className="notification-card__badge notification-card__badge--urgent">
+                    <span className="text-xs font-semibold py-0.5 px-2 rounded-sm lowercase bg-[#ffebee] text-[#c62828] border border-[#ef9a9a]">
                       urgent
                     </span>
                   )}
                   {notif.type === 'warning' && (
-                    <span className="notification-card__badge notification-card__badge--warning">
+                    <span className="text-xs font-semibold py-0.5 px-2 rounded-sm lowercase bg-[#fff8e1] text-[#e65100] border border-[#ffcc02]">
                       warning
                     </span>
                   )}
                 </div>
-                <p className="notification-card__message">{notif.message}</p>
-                <span className="notification-card__date">{notif.date}</span>
+                <p className="text-sm text-neutral-600 leading-relaxed">{notif.message}</p>
+                <span className="text-xs text-neutral-400 text-right mt-1">{notif.date}</span>
               </div>
             </div>
           ))
         ) : (
-          <div className="notification-list__empty">
+          <div className="text-center p-16 text-neutral-400 text-base">
             <p>Nu aveți notificări.</p>
           </div>
         )}

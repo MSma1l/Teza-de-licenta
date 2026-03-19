@@ -1,35 +1,20 @@
-/* ============================================
-   COMPONENTA FOOTER
-
-   Footer-ul paginii cu:
-   - Linkuri de navigare: Benefits, Specifications, How-to
-   - Buton de chat flotant (fixat dreapta jos)
-
-   Butonul de chat este afișat opțional
-   prin prop-ul showChat.
-   ============================================ */
-
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
-import './Footer.css';
 
-/* --- Tipul props-urilor --- */
 interface FooterProps {
-  showChat?: boolean;  /* Afișăm butonul de chat? */
+  showChat?: boolean;
 }
 
 const Footer = ({ showChat = false }: FooterProps) => {
   return (
-    <footer className="footer">
-      {/* --- Linkurile din footer --- */}
-      <div className="footer__links">
-        <span className="footer__link">Benefits</span>
-        <span className="footer__link">Specifications</span>
-        <span className="footer__link">How-to</span>
+    <footer className="px-12 py-8 border-t border-neutral-200 flex items-center justify-between">
+      <div className="flex gap-8">
+        <span className="text-sm font-medium text-neutral-600 cursor-pointer hover:text-primary transition-colors">Benefits</span>
+        <span className="text-sm font-medium text-neutral-600 cursor-pointer hover:text-primary transition-colors">Specifications</span>
+        <span className="text-sm font-medium text-neutral-600 cursor-pointer hover:text-primary transition-colors">How-to</span>
       </div>
 
-      {/* --- Buton de chat flotant (vizibil doar când showChat=true) --- */}
       {showChat && (
-        <div className="footer__chat">
+        <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-white cursor-pointer shadow-lg fixed bottom-6 right-6 z-[999] hover:scale-110 transition-all">
           <ChatBubbleOutlineIcon />
         </div>
       )}

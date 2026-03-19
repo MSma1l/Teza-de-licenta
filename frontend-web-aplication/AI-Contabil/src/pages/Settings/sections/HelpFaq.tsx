@@ -21,9 +21,6 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 /* Importăm tipurile */
 import type { FaqItem } from '../../../models/settingsTypes';
 
-/* Importăm stilurile */
-import './HelpFaq.css';
-
 /* --- Date mock pentru FAQ --- */
 const faqData: FaqItem[] = [
   {
@@ -105,24 +102,24 @@ const HelpFaq = () => {
   };
 
   return (
-    <div className="help-faq">
+    <div className="p-8 px-12 animate-fade-in">
       {/* === Header === */}
-      <div className="help-faq__header">
-        <HelpOutlineOutlinedIcon className="help-faq__header-icon" />
-        <h1 className="help-faq__title">Help & FAQ</h1>
+      <div className="flex items-center gap-3 mb-2">
+        <HelpOutlineOutlinedIcon className="!text-[2rem] text-neutral-black" />
+        <h1 className="font-heading text-2xl font-bold text-neutral-black">Help & FAQ</h1>
       </div>
 
       {/* === Descriere === */}
-      <p className="help-faq__desc">
+      <p className="text-sm text-neutral-500 mb-8 leading-relaxed">
         Găsiți răspunsuri la cele mai frecvente întrebări despre utilizarea platformei.
       </p>
 
       {/* === Câmpul de căutare === */}
-      <div className="help-faq__search">
-        <SearchIcon className="help-faq__search-icon" />
+      <div className="flex items-center gap-2 bg-neutral-100 rounded-lg py-2 px-3 mb-6 max-w-[500px] border border-neutral-200 transition-colors duration-200 focus-within:border-primary">
+        <SearchIcon className="!text-[1.2rem] text-neutral-400" />
         <input
           type="text"
-          className="help-faq__search-input"
+          className="flex-1 bg-transparent text-sm text-neutral-black placeholder:text-neutral-400 focus:outline-none"
           placeholder="Căutați o întrebare..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
@@ -130,12 +127,14 @@ const HelpFaq = () => {
       </div>
 
       {/* === Categorii === */}
-      <div className="help-faq__categories">
+      <div className="flex gap-2 mb-8 flex-wrap">
         {categories.map((category) => (
           <button
             key={category}
-            className={`help-faq__category ${
-              activeCategory === category ? 'help-faq__category--active' : ''
+            className={`py-1 px-6 rounded-full text-sm font-medium transition-all duration-200 ${
+              activeCategory === category
+                ? 'bg-primary text-white hover:bg-primary-light'
+                : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
             }`}
             onClick={() => setActiveCategory(category)}
           >
@@ -145,34 +144,37 @@ const HelpFaq = () => {
       </div>
 
       {/* === Lista de întrebări === */}
-      <div className="help-faq__list">
+      <div className="flex flex-col gap-2">
         {filteredFaqs.length > 0 ? (
           filteredFaqs.map((faq) => (
             <div
               key={faq.id}
-              className={`help-faq__item ${
-                openFaqId === faq.id ? 'help-faq__item--open' : ''
+              className={`border rounded-lg overflow-hidden transition-shadow duration-200 hover:shadow-sm ${
+                openFaqId === faq.id ? 'border-primary' : 'border-neutral-200'
               }`}
             >
               {/* Header-ul întrebării */}
-              <div className="help-faq__item-header" onClick={() => toggleFaq(faq.id)}>
-                <div className="help-faq__item-left">
-                  <span className="help-faq__item-category">{faq.category}</span>
-                  <h3 className="help-faq__item-question">{faq.question}</h3>
+              <div
+                className="flex items-center justify-between py-3 px-6 cursor-pointer bg-white transition-colors duration-200 hover:bg-neutral-100 [&>svg]:text-neutral-400 [&>svg]:text-2xl [&>svg]:shrink-0"
+                onClick={() => toggleFaq(faq.id)}
+              >
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-xs text-primary font-semibold uppercase tracking-wide">{faq.category}</span>
+                  <h3 className="text-base font-semibold text-neutral-black">{faq.question}</h3>
                 </div>
                 {openFaqId === faq.id ? <ExpandLessIcon /> : <ExpandMoreIcon />}
               </div>
 
               {/* Răspunsul (vizibil doar când e deschis) */}
               {openFaqId === faq.id && (
-                <div className="help-faq__item-answer">
-                  <p>{faq.answer}</p>
+                <div className="px-6 pb-6 bg-neutral-100 animate-fade-in">
+                  <p className="text-sm text-neutral-600 leading-[1.7]">{faq.answer}</p>
                 </div>
               )}
             </div>
           ))
         ) : (
-          <div className="help-faq__empty">
+          <div className="text-center p-16 text-neutral-400 text-base">
             <p>Nu s-au găsit rezultate pentru căutarea dumneavoastră.</p>
           </div>
         )}

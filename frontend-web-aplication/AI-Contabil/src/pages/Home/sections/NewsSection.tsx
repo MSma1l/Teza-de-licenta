@@ -1,30 +1,15 @@
-/* ============================================
-   SECȚIUNEA NEWS
-
-   Afișează o știre cu:
-   - Imagine placeholder (stânga)
-   - Text știre + autor + dată (dreapta)
-   ============================================ */
-
-import './NewsSection.css';
-
 const NewsSection = () => {
   return (
-    <section className="news">
-      {/* --- Titlul secțiunii --- */}
-      <h2 className="news__title">News</h2>
+    <section className="px-8 py-12">
+      <h2 className="font-heading text-[2rem] font-semibold text-center mb-8">News</h2>
 
-      {/* --- Card-ul știrii (2 coloane) --- */}
-      <div className="news__card">
-        {/* Imaginea știrii (placeholder) */}
-        <div className="news__image">
+      <div className="grid grid-cols-[280px_1fr] max-md:grid-cols-1 gap-8 max-w-[800px] mx-auto">
+        <div className="w-[280px] max-md:w-full h-[280px] max-md:h-[200px] rounded-xl bg-gradient-to-b from-[#d4c4a8] to-[#8a7a5a] flex items-center justify-center overflow-hidden text-neutral-400">
           Imagine știre
         </div>
 
-        {/* Conținutul text al știrii */}
-        <div className="news__content">
-          {/* Textul principal - placeholder cu "NewsNews..." */}
-          <p className="news__text">
+        <div className="flex flex-col justify-between">
+          <p className="text-base text-neutral-black font-semibold leading-relaxed break-all">
             NewsNewsNewsNewsNewsNewsNewsNewsNewsNewsNews
             NewsNewsNewsNewsNewsNewsNewsNewsNewsNewsNews
             NewsNewsNewsNewsNewsNewsNewsNewsNewsNewsNews
@@ -32,10 +17,9 @@ const NewsSection = () => {
             NewsNews
           </p>
 
-          {/* Metadate: autor și dată */}
-          <div className="news__meta">
-            <p className="news__author">Author</p>
-            <p className="news__date">Data</p>
+          <div className="mt-4">
+            <p className="text-sm font-semibold text-neutral-black">Author</p>
+            <p className="text-xs text-neutral-400">Data</p>
           </div>
         </div>
       </div>

@@ -24,9 +24,6 @@ import CloudUploadOutlinedIcon from '@mui/icons-material/CloudUploadOutlined';
 /* Importăm tipurile */
 import type { PasswordChangeData } from '../../../models/settingsTypes';
 
-/* Importăm stilurile */
-import './SecuritySettings.css';
-
 /* --- Componenta SecuritySettings --- */
 const SecuritySettings = () => {
   /* State pentru parola */
@@ -74,34 +71,34 @@ const SecuritySettings = () => {
   };
 
   return (
-    <div className="security-settings">
+    <div className="p-8 px-12 animate-fade-in">
       {/* === Titlu === */}
-      <h1 className="security-settings__title">Security</h1>
+      <h1 className="font-heading text-2xl font-bold text-neutral-black mb-12">Security</h1>
 
       {/* === Secțiunea 1: Schimbare parolă === */}
-      <div className="security-settings__section">
-        <div className="security-settings__section-header">
+      <div className="mb-12 pb-12 border-b border-neutral-200">
+        <div className="flex items-center gap-2 mb-2 [&_svg]:text-[1.4rem] [&_svg]:text-primary">
           <LockOutlinedIcon />
-          <h2 className="security-settings__section-title">Change Password</h2>
+          <h2 className="text-lg font-semibold text-neutral-black">Change Password</h2>
         </div>
-        <p className="security-settings__section-desc">
+        <p className="text-sm text-neutral-500 mb-6 leading-relaxed">
           Schimbați parola contului pentru a menține securitatea datelor.
         </p>
 
-        <div className="security-settings__form">
+        <div className="flex flex-col gap-3 max-w-[450px]">
           {/* Parola actuală */}
-          <div className="security-settings__field">
-            <label className="security-settings__label">Current Password</label>
-            <div className="security-settings__input-wrapper">
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-semibold text-neutral-black">Current Password</label>
+            <div className="relative flex items-center">
               <input
                 type={showPasswords.current ? 'text' : 'password'}
-                className="security-settings__input"
+                className="w-full py-3 px-6 pr-12 border border-neutral-300 rounded-lg text-base text-neutral-600 bg-white transition-colors duration-200 focus:border-primary focus:ring-2 focus:ring-primary/10 focus:outline-none"
                 value={passwordData.currentPassword}
                 onChange={(e) => handlePasswordChange('currentPassword', e.target.value)}
                 placeholder="Parola actuală"
               />
               <span
-                className="security-settings__toggle"
+                className="absolute right-3 text-neutral-400 cursor-pointer flex items-center transition-colors duration-200 hover:text-primary"
                 onClick={() => togglePasswordVisibility('current')}
               >
                 {showPasswords.current ? <VisibilityOutlinedIcon /> : <VisibilityOffOutlinedIcon />}
@@ -110,18 +107,18 @@ const SecuritySettings = () => {
           </div>
 
           {/* Parola nouă */}
-          <div className="security-settings__field">
-            <label className="security-settings__label">New Password</label>
-            <div className="security-settings__input-wrapper">
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-semibold text-neutral-black">New Password</label>
+            <div className="relative flex items-center">
               <input
                 type={showPasswords.new ? 'text' : 'password'}
-                className="security-settings__input"
+                className="w-full py-3 px-6 pr-12 border border-neutral-300 rounded-lg text-base text-neutral-600 bg-white transition-colors duration-200 focus:border-primary focus:ring-2 focus:ring-primary/10 focus:outline-none"
                 value={passwordData.newPassword}
                 onChange={(e) => handlePasswordChange('newPassword', e.target.value)}
                 placeholder="Parola nouă"
               />
               <span
-                className="security-settings__toggle"
+                className="absolute right-3 text-neutral-400 cursor-pointer flex items-center transition-colors duration-200 hover:text-primary"
                 onClick={() => togglePasswordVisibility('new')}
               >
                 {showPasswords.new ? <VisibilityOutlinedIcon /> : <VisibilityOffOutlinedIcon />}
@@ -130,18 +127,18 @@ const SecuritySettings = () => {
           </div>
 
           {/* Confirmare parolă */}
-          <div className="security-settings__field">
-            <label className="security-settings__label">Confirm New Password</label>
-            <div className="security-settings__input-wrapper">
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-semibold text-neutral-black">Confirm New Password</label>
+            <div className="relative flex items-center">
               <input
                 type={showPasswords.confirm ? 'text' : 'password'}
-                className="security-settings__input"
+                className="w-full py-3 px-6 pr-12 border border-neutral-300 rounded-lg text-base text-neutral-600 bg-white transition-colors duration-200 focus:border-primary focus:ring-2 focus:ring-primary/10 focus:outline-none"
                 value={passwordData.confirmPassword}
                 onChange={(e) => handlePasswordChange('confirmPassword', e.target.value)}
                 placeholder="Confirmă parola nouă"
               />
               <span
-                className="security-settings__toggle"
+                className="absolute right-3 text-neutral-400 cursor-pointer flex items-center transition-colors duration-200 hover:text-primary"
                 onClick={() => togglePasswordVisibility('confirm')}
               >
                 {showPasswords.confirm ? <VisibilityOutlinedIcon /> : <VisibilityOffOutlinedIcon />}
@@ -149,69 +146,81 @@ const SecuritySettings = () => {
             </div>
           </div>
 
-          <button className="security-settings__save-btn" onClick={handleSavePassword}>
+          <button
+            className="mt-2 py-3 px-12 bg-primary text-white rounded-full text-sm font-semibold self-start transition-all duration-200 hover:bg-primary-light hover:-translate-y-0.5 hover:shadow-md"
+            onClick={handleSavePassword}
+          >
             Update Password
           </button>
         </div>
       </div>
 
       {/* === Secțiunea 2: Documente de identitate === */}
-      <div className="security-settings__section">
-        <div className="security-settings__section-header">
+      <div className="mb-12 pb-12 border-b border-neutral-200">
+        <div className="flex items-center gap-2 mb-2 [&_svg]:text-[1.4rem] [&_svg]:text-primary">
           <DescriptionOutlinedIcon />
-          <h2 className="security-settings__section-title">Identity Documents</h2>
+          <h2 className="text-lg font-semibold text-neutral-black">Identity Documents</h2>
         </div>
-        <p className="security-settings__section-desc">
+        <p className="text-sm text-neutral-500 mb-6 leading-relaxed">
           Încărcați și gestionați documentele de identitate necesare pentru verificarea contului.
         </p>
 
-        <div className="security-settings__documents">
+        <div className="flex flex-col gap-3">
           {/* Card document - Buletin/Carte de identitate */}
-          <div className="security-settings__doc-card">
-            <div className="security-settings__doc-info">
+          <div className="flex items-center justify-between py-3 px-6 border border-neutral-200 rounded-lg bg-white">
+            <div className="flex items-center gap-3 [&>svg]:text-neutral-400 [&>svg]:text-2xl">
               <DescriptionOutlinedIcon />
               <div>
-                <h4 className="security-settings__doc-name">Buletin / Carte de identitate</h4>
-                <span className="security-settings__doc-status security-settings__doc-status--pending">
+                <h4 className="text-sm font-semibold text-neutral-black">Buletin / Carte de identitate</h4>
+                <span className="text-xs font-medium text-neutral-400">
                   Neîncărcat
                 </span>
               </div>
             </div>
-            <button className="security-settings__upload-btn" onClick={handleUploadDocument}>
+            <button
+              className="flex items-center gap-1 py-2 px-6 bg-neutral-100 text-neutral-600 rounded-lg text-sm font-medium transition-all duration-200 hover:bg-neutral-200 hover:text-primary [&_svg]:text-[1.2rem]"
+              onClick={handleUploadDocument}
+            >
               <CloudUploadOutlinedIcon />
               Upload
             </button>
           </div>
 
           {/* Card document - Pașaport */}
-          <div className="security-settings__doc-card">
-            <div className="security-settings__doc-info">
+          <div className="flex items-center justify-between py-3 px-6 border border-neutral-200 rounded-lg bg-white">
+            <div className="flex items-center gap-3 [&>svg]:text-neutral-400 [&>svg]:text-2xl">
               <DescriptionOutlinedIcon />
               <div>
-                <h4 className="security-settings__doc-name">Pașaport</h4>
-                <span className="security-settings__doc-status security-settings__doc-status--pending">
+                <h4 className="text-sm font-semibold text-neutral-black">Pașaport</h4>
+                <span className="text-xs font-medium text-neutral-400">
                   Neîncărcat
                 </span>
               </div>
             </div>
-            <button className="security-settings__upload-btn" onClick={handleUploadDocument}>
+            <button
+              className="flex items-center gap-1 py-2 px-6 bg-neutral-100 text-neutral-600 rounded-lg text-sm font-medium transition-all duration-200 hover:bg-neutral-200 hover:text-primary [&_svg]:text-[1.2rem]"
+              onClick={handleUploadDocument}
+            >
               <CloudUploadOutlinedIcon />
               Upload
             </button>
           </div>
 
           {/* Card document - Extras de cont */}
-          <div className="security-settings__doc-card">
-            <div className="security-settings__doc-info">
+          <div className="flex items-center justify-between py-3 px-6 border border-neutral-200 rounded-lg bg-white">
+            <div className="flex items-center gap-3 [&>svg]:text-neutral-400 [&>svg]:text-2xl">
               <DescriptionOutlinedIcon />
               <div>
-                <h4 className="security-settings__doc-name">Extras de cont bancar</h4>
-                <span className="security-settings__doc-status security-settings__doc-status--pending">
+                <h4 className="text-sm font-semibold text-neutral-black">Extras de cont bancar</h4>
+                <span className="text-xs font-medium text-neutral-400">
                   Neîncărcat
                 </span>
               </div>
             </div>
-            <button className="security-settings__upload-btn" onClick={handleUploadDocument}>
+            <button
+              className="flex items-center gap-1 py-2 px-6 bg-neutral-100 text-neutral-600 rounded-lg text-sm font-medium transition-all duration-200 hover:bg-neutral-200 hover:text-primary [&_svg]:text-[1.2rem]"
+              onClick={handleUploadDocument}
+            >
               <CloudUploadOutlinedIcon />
               Upload
             </button>
@@ -220,48 +229,52 @@ const SecuritySettings = () => {
       </div>
 
       {/* === Secțiunea 3: Autentificare în doi pași === */}
-      <div className="security-settings__section">
-        <div className="security-settings__section-header">
+      <div className="mb-12 pb-12 border-b border-neutral-200">
+        <div className="flex items-center gap-2 mb-2 [&_svg]:text-[1.4rem] [&_svg]:text-primary">
           <SecurityOutlinedIcon />
-          <h2 className="security-settings__section-title">Two-Factor Authentication</h2>
+          <h2 className="text-lg font-semibold text-neutral-black">Two-Factor Authentication</h2>
         </div>
-        <p className="security-settings__section-desc">
+        <p className="text-sm text-neutral-500 mb-6 leading-relaxed">
           Adăugați un nivel suplimentar de securitate contului dumneavoastră.
         </p>
 
-        <div className="security-settings__toggle-row">
-          <span className="security-settings__toggle-label">
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-medium text-neutral-600">
             {is2FAEnabled ? 'Activat' : 'Dezactivat'}
           </span>
           <button
-            className={`security-settings__toggle-btn ${
-              is2FAEnabled ? 'security-settings__toggle-btn--active' : ''
+            className={`w-12 h-[26px] rounded-[13px] relative p-0 transition-colors duration-200 ${
+              is2FAEnabled ? 'bg-[#4caf50]' : 'bg-neutral-300'
             }`}
             onClick={() => setIs2FAEnabled(!is2FAEnabled)}
           >
-            <span className="security-settings__toggle-knob" />
+            <span
+              className={`absolute top-[3px] left-[3px] w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                is2FAEnabled ? 'translate-x-[22px]' : ''
+              }`}
+            />
           </button>
         </div>
       </div>
 
       {/* === Secțiunea 4: Sesiuni active === */}
-      <div className="security-settings__section">
-        <div className="security-settings__section-header">
+      <div className="mb-12 pb-12">
+        <div className="flex items-center gap-2 mb-2 [&_svg]:text-[1.4rem] [&_svg]:text-primary">
           <DevicesOutlinedIcon />
-          <h2 className="security-settings__section-title">Active Sessions</h2>
+          <h2 className="text-lg font-semibold text-neutral-black">Active Sessions</h2>
         </div>
-        <p className="security-settings__section-desc">
+        <p className="text-sm text-neutral-500 mb-6 leading-relaxed">
           Gestionați dispozitivele pe care sunteți autentificat.
         </p>
 
-        <div className="security-settings__sessions">
-          <div className="security-settings__session-card">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-3 py-3 px-6 border border-neutral-200 rounded-lg [&>svg]:text-neutral-400 [&>svg]:text-2xl">
             <DevicesOutlinedIcon />
-            <div className="security-settings__session-info">
+            <div className="flex-1 [&_h4]:text-sm [&_h4]:font-semibold [&_h4]:text-neutral-black [&_span]:text-xs [&_span]:text-neutral-400">
               <h4>Browser curent</h4>
               <span>Ultima activitate: acum</span>
             </div>
-            <span className="security-settings__session-status">Activ</span>
+            <span className="text-xs font-semibold text-[#4caf50] py-0.5 px-2.5 bg-[#e8f5e9] rounded-sm">Activ</span>
           </div>
         </div>
       </div>

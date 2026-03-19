@@ -1,116 +1,62 @@
-/* ============================================
-   SECȚIUNEA STAGES OF CREATING A DOCUMENT
-
-   Afișează cei 5 pași pentru crearea unui document
-   cu INTERACTIVITATE:
-
-   - La CLICK pe un pas (01, 02, etc.), imaginea
-     din dreapta se schimbă cu animație (fade).
-   - Pasul activ este evidențiat vizual (fundal,
-     culoare diferită).
-   - Implicit este selectat pasul 01.
-
-   CUM FUNCȚIONEAZĂ:
-   1. useState ține pasul activ curent (activeStep)
-   2. La click pe un pas, setăm activeStep = index
-   3. Imaginea din dreapta se schimbă pe baza
-      activeStep (fiecare pas are propria imagine)
-   4. Animația se face prin key pe container -
-      React re-rendează cu fade la schimbarea key-ului
-
-   NOTĂ: Imaginile sunt placeholder-uri.
-   Înlocuiește src-ul cu imagini reale din assets.
-   ============================================ */
-
 import { useState } from 'react';
-import './StagesSection.css';
 
-/* --- Datele celor 5 pași ---
-     Fiecare pas are: număr, text, placeholder imagine */
 const stagesData = [
-  {
-    number: '01',
-    text: 'Selecti the type of document',
-    imageLabel: 'Selectare tip document',
-    imageColor: '#d4e6f1',    /* Culoare fundal imagine - albastru deschis */
-  },
-  {
-    number: '02',
-    text: 'Entering the necessary data and scan the document with the mobile application',
-    imageLabel: 'Introducere date & scanare',
-    imageColor: '#d5f5e3',    /* Verde deschis */
-  },
-  {
-    number: '03',
-    text: 'Confirmation and validation of data with the Moobile application',
-    imageLabel: 'Confirmare & validare date',
-    imageColor: '#fdebd0',    /* Portocaliu deschis */
-  },
-  {
-    number: '04',
-    text: 'The generation of the act and the programming at the office for signature',
-    imageLabel: 'Generare act & programare',
-    imageColor: '#e8daef',    /* Mov deschis */
-  },
-  {
-    number: '05',
-    text: 'The request sent successfully',
-    imageLabel: 'Cerere trimisă cu succes',
-    imageColor: '#d4efdf',    /* Verde mentă */
-  },
+  { number: '01', text: 'Selecti the type of document', imageLabel: 'Selectare tip document', imageColor: '#d4e6f1' },
+  { number: '02', text: 'Entering the necessary data and scan the document with the mobile application', imageLabel: 'Introducere date & scanare', imageColor: '#d5f5e3' },
+  { number: '03', text: 'Confirmation and validation of data with the Moobile application', imageLabel: 'Confirmare & validare date', imageColor: '#fdebd0' },
+  { number: '04', text: 'The generation of the act and the programming at the office for signature', imageLabel: 'Generare act & programare', imageColor: '#e8daef' },
+  { number: '05', text: 'The request sent successfully', imageLabel: 'Cerere trimisă cu succes', imageColor: '#d4efdf' },
 ];
 
 const StagesSection = () => {
-  /* === STATE: Pasul activ curent (implicit primul - index 0) ===
-     Când utilizatorul apasă pe un pas, activeStep se schimbă
-     și imaginea din dreapta se actualizează automat */
   const [activeStep, setActiveStep] = useState(0);
 
   return (
-    <section className="stages">
-      {/* === COLOANA STÂNGĂ: Titlu + Lista interactivă de pași === */}
-      <div className="stages__content">
-        {/* Titlul secțiunii */}
-        <h2 className="stages__title">
+    <section className="px-8 py-12 grid grid-cols-2 max-md:grid-cols-1 gap-16 items-center">
+      <div className="flex flex-col">
+        <h2 className="font-heading text-[2rem] font-semibold italic text-neutral-black mb-8 leading-[1.3]">
           Stages of creating a document
         </h2>
 
-        {/* Lista cu pași - fiecare pas este clickable */}
-        <div className="stages__list">
+        <div className="flex flex-col gap-2">
           {stagesData.map((stage, index) => (
             <div
               key={stage.number}
-              /* Adăugăm clasa "--active" pe pasul selectat */
-              className={`stages__step ${activeStep === index ? 'stages__step--active' : ''}`}
-              /* La click, setăm acest pas ca activ */
+              className={`flex items-start gap-4 p-4 rounded-md cursor-pointer transition-all duration-300 border-l-[3px] ${
+                activeStep === index
+                  ? 'bg-accent-bg border-l-accent'
+                  : 'border-transparent hover:bg-neutral-100'
+              }`}
               onClick={() => setActiveStep(index)}
             >
-              {/* Numărul pasului */}
-              <span className="stages__step-number">{stage.number}</span>
-              {/* Textul pasului */}
-              <span className="stages__step-text">{stage.text}</span>
+              <span className={`text-lg font-bold min-w-[30px] transition-colors duration-200 ${
+                activeStep === index ? 'text-primary' : 'text-accent'
+              }`}>
+                {stage.number}
+              </span>
+              <span className={`text-sm leading-relaxed transition-all duration-200 ${
+                activeStep === index ? 'text-neutral-black font-medium' : 'text-neutral-600'
+              }`}>
+                {stage.text}
+              </span>
             </div>
           ))}
         </div>
 
-        {/* Butonul de creare document */}
-        <button className="stages__button">Create document</button>
+        <button className="mt-8 px-6 py-4 bg-accent-bg text-neutral-black rounded-full text-sm font-semibold self-start border-2 border-accent transition-all duration-200 hover:bg-accent hover:text-white hover:-translate-y-0.5">
+          Create document
+        </button>
       </div>
 
-      {/* === COLOANA DREAPTĂ: Imaginea care se schimbă ===
-          key={activeStep} forțează React să re-rendeze containerul
-          la fiecare schimbare, declanșând animația CSS */}
-      <div className="stages__image" key={activeStep}>
+      <div className="w-full h-[400px] max-md:h-[300px] bg-neutral-100 rounded-xl flex items-center justify-center border-2 border-neutral-200 animate-stage-fade" key={activeStep}>
         <div
-          className="stages__image-placeholder"
+          className="w-[70%] h-[75%] rounded-xl border-2 border-neutral-200 flex flex-col items-center justify-center gap-4 transition-colors duration-300"
           style={{ backgroundColor: stagesData[activeStep].imageColor }}
         >
-          {/* Textul placeholder - va fi înlocuit cu <img> real */}
-          <span className="stages__image-label">
+          <span className="text-sm text-neutral-500 font-medium text-center px-4">
             {stagesData[activeStep].imageLabel}
           </span>
-          {/* Indicator pas curent */}
-          <span className="stages__image-step-number">
+          <span className="font-heading text-[2.5rem] font-bold text-black/10">
             {stagesData[activeStep].number}
           </span>
         </div>

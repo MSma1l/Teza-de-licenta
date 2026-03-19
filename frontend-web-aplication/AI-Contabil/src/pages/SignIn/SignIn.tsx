@@ -1,41 +1,24 @@
-/* ============================================
-   PAGINA DE LOGARE (SIGN IN)
-
-   Permite utilizatorului să se logheze în cont.
-   Conectat la backend-ul real prin AuthContext.
-   ============================================ */
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-/* Importăm iconițele Material UI */
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 
-/* Importăm Navbar */
 import Navbar from '../../components/Navbar/Navbar';
-
-/* Importăm AuthContext */
 import { useAuth } from '../../context/AuthContext';
 
-/* Importăm stilurile */
-import './SignIn.css';
-
-/* --- Componenta paginii de logare --- */
 const SignIn = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  /* State pentru câmpuri */
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  /* Handler pentru submit */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -57,38 +40,47 @@ const SignIn = () => {
   };
 
   return (
-    <div className="signin-page">
-      {/* === NAVBAR - fără linkuri navigare === */}
+    <div className="min-h-screen bg-gradient-to-br from-[#0d1b2a] via-[#1b2a4a] to-[#0a1628] bg-[length:400%_400%] animate-auth-gradient flex flex-col relative overflow-hidden">
       <Navbar isLoggedIn={false} showNavLinks={false} />
 
-      {/* === CONȚINUT PRINCIPAL === */}
-      <div className="signin-page__content">
-        {/* Elementele animate de fundal */}
-        <div className="signin-page__bg-shapes">
-          <div className="signin-page__shape signin-page__shape--1" />
-          <div className="signin-page__shape signin-page__shape--2" />
-          <div className="signin-page__shape signin-page__shape--3" />
-          <div className="signin-page__shape signin-page__shape--4" />
-          <div className="signin-page__shape signin-page__shape--5" />
+      <div className="flex-1 flex justify-center items-center p-8 relative z-[1]">
+        {/* Forme animate de fundal */}
+        <div className="absolute inset-0 overflow-hidden z-0 pointer-events-none">
+          <div
+            className="absolute rounded-full blur-[80px] opacity-35 animate-float-1"
+            style={{ width: 400, height: 400, top: -100, left: -100, background: 'radial-gradient(circle, #8a9a6a, #6b7a4e)' }}
+          />
+          <div
+            className="absolute rounded-full blur-[80px] opacity-35 animate-float-2"
+            style={{ width: 350, height: 350, bottom: -80, right: -80, background: 'radial-gradient(circle, #2a5a6a, #1a3a4a)' }}
+          />
+          <div
+            className="absolute rounded-full blur-[80px] opacity-35 animate-float-3"
+            style={{ width: 200, height: 200, top: '40%', right: '15%', background: 'radial-gradient(circle, #3a8a8a, #1a5a6a)' }}
+          />
+          <div
+            className="absolute rounded-full blur-[80px] opacity-35 animate-float-4"
+            style={{ width: 180, height: 180, bottom: '20%', left: '10%', background: 'radial-gradient(circle, #a8b878, #8a9a6a)' }}
+          />
+          <div
+            className="absolute rounded-full blur-[80px] opacity-35 animate-float-5"
+            style={{ width: 150, height: 150, top: '15%', left: '55%', background: 'radial-gradient(circle, #4a7a8a, #2a5a6a)' }}
+          />
         </div>
 
-        <div className="signin-card">
-          {/* --- Titlu --- */}
-          <h1 className="signin-card__title">Hello !</h1>
+        <div className="bg-white/95 backdrop-blur-[20px] border border-white/20 rounded-xl px-16 py-12 w-full max-w-[480px] relative z-[2] animate-scale-in shadow-[0_8px_40px_rgba(0,0,0,0.3),0_0_80px_rgba(138,154,106,0.08)]">
+          <h1 className="font-heading text-[2rem] font-bold text-primary text-center mb-8">Hello !</h1>
 
-          {/* --- Mesaj de eroare --- */}
-          {error && <p className="signin-card__error">{error}</p>}
+          {error && <p className="text-red-600 text-sm text-center mb-4">{error}</p>}
 
-          {/* --- Formular de logare --- */}
-          <form className="signin-card__form" onSubmit={handleSubmit}>
-            {/* Câmpul de identificare */}
-            <div className="signin-card__input-group">
-              <span className="signin-card__input-icon">
+          <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
+            <div className="flex items-center gap-3 bg-input-bg rounded-full px-5 py-3 shadow-[0_2px_8px_rgba(0,0,0,0.08)] transition-shadow duration-200 focus-within:shadow-[0_2px_12px_rgba(0,0,0,0.15)]">
+              <span className="text-neutral-400 flex items-center">
                 <PersonOutlineIcon />
               </span>
               <input
                 type="text"
-                className="signin-card__input"
+                className="flex-1 bg-transparent text-base text-primary font-medium placeholder:text-primary placeholder:font-medium"
                 placeholder="Name, Email, Contact number"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
@@ -96,44 +88,39 @@ const SignIn = () => {
               />
             </div>
 
-            {/* Câmpul parolă cu toggle vizibilitate */}
-            <div className="signin-card__input-group">
-              <span className="signin-card__input-icon">
+            <div className="flex items-center gap-3 bg-input-bg rounded-full px-5 py-3 shadow-[0_2px_8px_rgba(0,0,0,0.08)] transition-shadow duration-200 focus-within:shadow-[0_2px_12px_rgba(0,0,0,0.15)]">
+              <span className="text-neutral-400 flex items-center">
                 <LockOutlinedIcon />
               </span>
               <input
                 type={showPassword ? 'text' : 'password'}
-                className="signin-card__input"
+                className="flex-1 bg-transparent text-base text-primary font-medium placeholder:text-primary placeholder:font-medium"
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
               />
               <span
-                className="signin-card__password-toggle"
+                className="text-neutral-400 cursor-pointer flex items-center transition-colors duration-200 hover:text-primary"
                 onClick={() => setShowPassword(!showPassword)}
               >
-                {showPassword ? (
-                  <VisibilityOutlinedIcon />
-                ) : (
-                  <VisibilityOffOutlinedIcon />
-                )}
+                {showPassword ? <VisibilityOutlinedIcon /> : <VisibilityOffOutlinedIcon />}
               </span>
             </div>
 
-            {/* Butonul de logare */}
-            <button type="submit" className="signin-card__submit" disabled={loading}>
+            <button
+              type="submit"
+              className="mt-3 px-8 py-3 bg-primary text-white rounded-full text-base font-semibold tracking-[1px] self-center transition-all duration-200 hover:bg-primary-light hover:-translate-y-0.5 hover:shadow-md disabled:opacity-60"
+              disabled={loading}
+            >
               {loading ? 'SE CONECTEAZĂ...' : 'SIGN IN'}
             </button>
           </form>
 
-          {/* --- Link către Sign Up --- */}
-          <div className="signin-card__footer">
-            <span className="signin-card__footer-link">
-              Already registered?{' '}
-            </span>
+          <div className="text-center mt-5 text-sm text-neutral-500">
+            <span className="text-primary cursor-pointer">Already registered? </span>
             <span
-              className="signin-card__footer-link--bold"
+              className="font-bold text-neutral-black cursor-pointer transition-colors duration-200 hover:text-primary"
               onClick={() => navigate('/signup')}
             >
               Sign up
