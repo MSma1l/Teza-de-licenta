@@ -10,7 +10,7 @@
    NOTĂ: Datele vor veni din API în viitor.
    ============================================ */
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 
 /* Importăm iconițe Material UI */
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
@@ -21,8 +21,10 @@ import SecurityOutlinedIcon from '@mui/icons-material/SecurityOutlined';
 import DevicesOutlinedIcon from '@mui/icons-material/DevicesOutlined';
 import CloudUploadOutlinedIcon from '@mui/icons-material/CloudUploadOutlined';
 
-/* Importăm tipurile */
+/* Importăm tipurile și API-ul */
 import type { PasswordChangeData } from '../../../models/settingsTypes';
+import { changePassword, uploadSecurityDocument } from '../../../api/settingsApi';
+import AlertToast from '../../../components/AlertToast/AlertToast';
 
 /* --- Componenta SecuritySettings --- */
 const SecuritySettings = () => {
@@ -42,21 +44,37 @@ const SecuritySettings = () => {
 
   /* State pentru 2FA */
   const [is2FAEnabled, setIs2FAEnabled] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [uploadingDoc, setUploadingDoc] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [currentDocType, setCurrentDocType] = useState('');
 
   /* Handler schimbare parolă */
   const handlePasswordChange = (field: keyof PasswordChangeData, value: string) => {
     setPasswordData((prev) => ({ ...prev, [field]: value }));
   };
 
-  /* Handler salvare parolă nouă */
-  const handleSavePassword = () => {
+  /* Handler salvare parolă nouă - conectat la API */
+  const handleSavePassword = async () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      // TODO: Afișează alertă de eroare
-      console.log('Parolele nu coincid');
+      setToast({ message: 'Parolele noi nu coincid', type: 'error' });
       return;
     }
-    // TODO: Apel API changePassword(passwordData)
-    console.log('Changing password:', passwordData);
+    if (passwordData.newPassword.length < 6) {
+      setToast({ message: 'Parola nouă trebuie să aibă minim 6 caractere', type: 'error' });
+      return;
+    }
+    setSaving(true);
+    try {
+      await changePassword(passwordData);
+      setToast({ message: 'Parola a fost schimbată cu succes!', type: 'success' });
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (e: any) {
+      setToast({ message: e.message || 'Eroare la schimbarea parolei', type: 'error' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   /* Toggle vizibilitate parolă */
@@ -64,10 +82,25 @@ const SecuritySettings = () => {
     setShowPasswords((prev) => ({ ...prev, [field]: !prev[field] }));
   };
 
-  /* Handler upload document */
-  const handleUploadDocument = () => {
-    // TODO: Deschide file picker + apel API uploadSecurityDocument
-    console.log('Upload document');
+  /* Handler upload document - conectat la API */
+  const handleUploadDocument = (docType: string) => {
+    setCurrentDocType(docType);
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingDoc(currentDocType);
+    try {
+      await uploadSecurityDocument(file, currentDocType);
+      setToast({ message: 'Document încărcat cu succes!', type: 'success' });
+    } catch (err: any) {
+      setToast({ message: err.message || 'Eroare la upload', type: 'error' });
+    } finally {
+      setUploadingDoc(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   return (
@@ -147,10 +180,11 @@ const SecuritySettings = () => {
           </div>
 
           <button
-            className="mt-2 py-3 px-12 bg-primary text-white rounded-full text-sm font-semibold self-start transition-all duration-200 hover:bg-primary-light hover:-translate-y-0.5 hover:shadow-md"
+            className="mt-2 py-3 px-12 bg-primary text-white rounded-full text-sm font-semibold self-start transition-all duration-200 hover:bg-primary-light hover:-translate-y-0.5 hover:shadow-md disabled:opacity-50"
             onClick={handleSavePassword}
+            disabled={saving}
           >
-            Update Password
+            {saving ? 'Se actualizează...' : 'Update Password'}
           </button>
         </div>
       </div>
@@ -173,13 +207,13 @@ const SecuritySettings = () => {
               <div>
                 <h4 className="text-sm font-semibold text-neutral-black">Buletin / Carte de identitate</h4>
                 <span className="text-xs font-medium text-neutral-400">
-                  Neîncărcat
+                  {uploadingDoc === 'buletin' ? 'Se încarcă...' : 'Neîncărcat'}
                 </span>
               </div>
             </div>
             <button
               className="flex items-center gap-1 py-2 px-6 bg-neutral-100 text-neutral-600 rounded-lg text-sm font-medium transition-all duration-200 hover:bg-neutral-200 hover:text-primary [&_svg]:text-[1.2rem]"
-              onClick={handleUploadDocument}
+              onClick={() => handleUploadDocument('buletin')}
             >
               <CloudUploadOutlinedIcon />
               Upload
@@ -193,13 +227,13 @@ const SecuritySettings = () => {
               <div>
                 <h4 className="text-sm font-semibold text-neutral-black">Pașaport</h4>
                 <span className="text-xs font-medium text-neutral-400">
-                  Neîncărcat
+                  {uploadingDoc === 'pasaport' ? 'Se încarcă...' : 'Neîncărcat'}
                 </span>
               </div>
             </div>
             <button
               className="flex items-center gap-1 py-2 px-6 bg-neutral-100 text-neutral-600 rounded-lg text-sm font-medium transition-all duration-200 hover:bg-neutral-200 hover:text-primary [&_svg]:text-[1.2rem]"
-              onClick={handleUploadDocument}
+              onClick={() => handleUploadDocument('pasaport')}
             >
               <CloudUploadOutlinedIcon />
               Upload
@@ -213,13 +247,13 @@ const SecuritySettings = () => {
               <div>
                 <h4 className="text-sm font-semibold text-neutral-black">Extras de cont bancar</h4>
                 <span className="text-xs font-medium text-neutral-400">
-                  Neîncărcat
+                  {uploadingDoc === 'extras_bancar' ? 'Se încarcă...' : 'Neîncărcat'}
                 </span>
               </div>
             </div>
             <button
               className="flex items-center gap-1 py-2 px-6 bg-neutral-100 text-neutral-600 rounded-lg text-sm font-medium transition-all duration-200 hover:bg-neutral-200 hover:text-primary [&_svg]:text-[1.2rem]"
-              onClick={handleUploadDocument}
+              onClick={() => handleUploadDocument('extras_bancar')}
             >
               <CloudUploadOutlinedIcon />
               Upload
@@ -278,6 +312,24 @@ const SecuritySettings = () => {
           </div>
         </div>
       </div>
+
+      {/* Hidden file input pentru upload documente */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        className="hidden"
+        accept=".pdf,.jpg,.jpeg,.png,.webp"
+        onChange={handleFileSelected}
+      />
+
+      {toast && (
+        <AlertToast
+          title={toast.type === 'success' ? 'Succes' : 'Eroare'}
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 };

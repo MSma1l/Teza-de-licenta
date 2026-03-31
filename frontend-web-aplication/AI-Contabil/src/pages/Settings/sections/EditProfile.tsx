@@ -9,14 +9,16 @@
    NOTĂ: Datele vor veni din API în viitor.
    ============================================ */
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 /* Importăm iconițe Material UI */
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import CheckBoxIcon from '@mui/icons-material/CheckBox';
 
-/* Importăm tipurile */
+/* Importăm tipurile și API-ul */
 import type { UserProfile } from '../../../models/settingsTypes';
+import { fetchUserProfile, updateUserProfile, uploadAvatar } from '../../../api/settingsApi';
+import AlertToast from '../../../components/AlertToast/AlertToast';
 
 /* --- Componenta EditProfile --- */
 const EditProfile = () => {
@@ -30,22 +32,57 @@ const EditProfile = () => {
 
   /* State pentru email verificat */
   const [isEmailVerified] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  /* Încărcăm datele profilului de la API */
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const data = await fetchUserProfile();
+        setProfile(data);
+      } catch {
+        /* profilul rămâne gol */
+      }
+    };
+    load();
+  }, []);
 
   /* Handler pentru schimbarea câmpurilor */
   const handleChange = (field: keyof UserProfile, value: string) => {
     setProfile((prev) => ({ ...prev, [field]: value }));
   };
 
-  /* Handler pentru salvare (va fi conectat la API) */
-  const handleSave = () => {
-    // TODO: Apel API updateUserProfile(profile)
-    console.log('Saving profile:', profile);
+  /* Handler pentru salvare - conectat la API */
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const updated = await updateUserProfile(profile);
+      setProfile(updated);
+      setToast({ message: 'Profilul a fost salvat cu succes!', type: 'success' });
+    } catch (e: any) {
+      setToast({ message: e.message || 'Eroare la salvare', type: 'error' });
+    } finally {
+      setSaving(false);
+    }
   };
 
-  /* Handler pentru schimbarea avatarului */
+  /* Handler pentru schimbarea avatarului - conectat la API */
   const handleAvatarChange = () => {
-    // TODO: Deschide file picker + apel API uploadAvatar
-    console.log('Change avatar');
+    fileInputRef.current?.click();
+  };
+
+  const handleAvatarFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const avatarUrl = await uploadAvatar(file);
+      setProfile((prev) => ({ ...prev, avatarUrl }));
+      setToast({ message: 'Avatar actualizat!', type: 'success' });
+    } catch (err: any) {
+      setToast({ message: err.message || 'Eroare la upload avatar', type: 'error' });
+    }
   };
 
   return (
@@ -102,10 +139,11 @@ const EditProfile = () => {
 
           {/* Butonul de salvare */}
           <button
-            className="mt-3 py-3 px-12 bg-primary text-white rounded-full text-base font-semibold self-start transition-all duration-200 hover:bg-primary-light hover:-translate-y-0.5 hover:shadow-md"
+            className="mt-3 py-3 px-12 bg-primary text-white rounded-full text-base font-semibold self-start transition-all duration-200 hover:bg-primary-light hover:-translate-y-0.5 hover:shadow-md disabled:opacity-50"
             onClick={handleSave}
+            disabled={saving}
           >
-            Save Changes
+            {saving ? 'Se salvează...' : 'Save Changes'}
           </button>
         </div>
 
@@ -118,6 +156,13 @@ const EditProfile = () => {
               <PersonOutlineIcon className="!text-5xl text-neutral-black" />
             )}
           </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={handleAvatarFileSelected}
+          />
           <span
             className="text-sm text-[#1a73e8] cursor-pointer transition-opacity duration-200 hover:opacity-70"
             onClick={handleAvatarChange}
@@ -126,6 +171,15 @@ const EditProfile = () => {
           </span>
         </div>
       </div>
+
+      {toast && (
+        <AlertToast
+          title={toast.type === 'success' ? 'Succes' : 'Eroare'}
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 };

@@ -5,6 +5,9 @@ import SignIn from './pages/SignIn/SignIn';
 import SignUp from './pages/SignUp/SignUp';
 import Settings from './pages/Settings/Settings';
 import Training from './pages/Training/Training';
+import Documents from './pages/Documents/Documents';
+import Reports from './pages/Reports/Reports';
+import ErrorBoundary from './components/ErrorBoundary/ErrorBoundary';
 
 import { useAuth } from './context/AuthContext';
 
@@ -21,16 +24,20 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen relative overflow-x-hidden">
-      <Routes location={location} key={location.pathname}>
-        <Route path="/" element={<Home isLoggedIn={isLoggedIn} />} />
-        <Route path="/home" element={isLoggedIn ? <Home isLoggedIn={true} /> : <Navigate to="/signin" />} />
-        <Route path="/signin" element={isLoggedIn ? <Navigate to="/home" /> : <SignIn />} />
-        <Route path="/signup" element={isLoggedIn ? <Navigate to="/home" /> : <SignUp />} />
-        <Route path="/settings" element={isLoggedIn ? <Settings /> : <Navigate to="/signin" />} />
-        <Route path="/training" element={isLoggedIn ? <Training /> : <Navigate to="/signin" />} />
-      </Routes>
-    </div>
+    <ErrorBoundary>
+      <div className="min-h-screen relative overflow-x-hidden">
+        <Routes location={location} key={location.pathname}>
+          <Route path="/" element={<Home isLoggedIn={isLoggedIn} />} />
+          <Route path="/home" element={isLoggedIn ? <Home isLoggedIn={true} /> : <Navigate to="/signin" />} />
+          <Route path="/signin" element={isLoggedIn ? <Navigate to="/home" /> : <SignIn />} />
+          <Route path="/signup" element={isLoggedIn ? <Navigate to="/home" /> : <SignUp />} />
+          <Route path="/settings" element={isLoggedIn ? <Settings /> : <Navigate to="/signin" />} />
+          <Route path="/training" element={isLoggedIn ? <Training /> : <Navigate to="/signin" />} />
+          <Route path="/documents" element={isLoggedIn ? <Documents /> : <Navigate to="/signin" />} />
+          <Route path="/reports" element={isLoggedIn ? <Reports /> : <Navigate to="/signin" />} />
+        </Routes>
+      </div>
+    </ErrorBoundary>
   );
 }
 

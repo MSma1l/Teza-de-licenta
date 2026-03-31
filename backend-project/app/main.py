@@ -14,8 +14,9 @@ from app.models import (  # noqa: F401
     model_version, audit_log, document_embedding,
 )
 
-# Create tables (in production use Alembic migrations)
-Base.metadata.create_all(bind=engine)
+# Create tables (in production use Alembic migrations, skip in testing)
+if os.environ.get("TESTING") != "1":
+    Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="AI-Contabil API",
@@ -35,7 +36,8 @@ app.add_middleware(
 # Static files for uploads
 uploads_dir = settings.UPLOAD_DIR
 os.makedirs(uploads_dir, exist_ok=True)
-app.mount("/storage", StaticFiles(directory="storage"), name="storage")
+if os.path.isdir("storage"):
+    app.mount("/storage", StaticFiles(directory="storage"), name="storage")
 
 # Routes
 app.include_router(auth.router, prefix="/api")
