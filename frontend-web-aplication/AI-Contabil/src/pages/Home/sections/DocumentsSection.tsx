@@ -1,3 +1,5 @@
+import { useNavigate } from 'react-router-dom';
+
 const documentsData = [
   {
     name: 'DocumentName',
@@ -14,6 +16,8 @@ const documentsData = [
 ];
 
 const DocumentsSection = () => {
+  const navigate = useNavigate();
+
   return (
     <section className="px-8 py-12 text-center border-t border-neutral-200">
       <p className="text-sm text-accent font-medium mb-2">Document</p>
@@ -26,7 +30,10 @@ const DocumentsSection = () => {
         The following are the most often generated documents and the necessary information.
       </p>
 
-      <button className="px-6 py-3 bg-accent-bg text-neutral-black rounded-full text-sm font-semibold mb-8 transition-all duration-200 hover:bg-accent hover:text-white">
+      <button
+        className="px-6 py-3 bg-accent-bg text-neutral-black rounded-full text-sm font-semibold mb-8 transition-all duration-200 hover:bg-accent hover:text-white cursor-pointer"
+        onClick={() => navigate('/documents')}
+      >
         Create document
       </button>
 

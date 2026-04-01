@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const stagesData = [
   { number: '01', text: 'Selecti the type of document', imageLabel: 'Selectare tip document', imageColor: '#d4e6f1' },
@@ -10,6 +11,7 @@ const stagesData = [
 
 const StagesSection = () => {
   const [activeStep, setActiveStep] = useState(0);
+  const navigate = useNavigate();
 
   return (
     <section className="px-8 py-12 grid grid-cols-2 max-md:grid-cols-1 gap-16 items-center">
@@ -43,7 +45,10 @@ const StagesSection = () => {
           ))}
         </div>
 
-        <button className="mt-8 px-6 py-4 bg-accent-bg text-neutral-black rounded-full text-sm font-semibold self-start border-2 border-accent transition-all duration-200 hover:bg-accent hover:text-white hover:-translate-y-0.5">
+        <button
+          className="mt-8 px-6 py-4 bg-accent-bg text-neutral-black rounded-full text-sm font-semibold self-start border-2 border-accent transition-all duration-200 hover:bg-accent hover:text-white hover:-translate-y-0.5 cursor-pointer"
+          onClick={() => navigate('/documents')}
+        >
           Create document
         </button>
       </div>

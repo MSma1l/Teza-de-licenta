@@ -305,8 +305,8 @@ const SecuritySettings = () => {
           <div className="flex items-center gap-3 py-3 px-6 border border-neutral-200 rounded-lg [&>svg]:text-neutral-400 [&>svg]:text-2xl">
             <DevicesOutlinedIcon />
             <div className="flex-1 [&_h4]:text-sm [&_h4]:font-semibold [&_h4]:text-neutral-black [&_span]:text-xs [&_span]:text-neutral-400">
-              <h4>Browser curent</h4>
-              <span>Ultima activitate: acum</span>
+              <h4>{navigator.userAgent.includes('Chrome') ? 'Google Chrome' : navigator.userAgent.includes('Firefox') ? 'Mozilla Firefox' : navigator.userAgent.includes('Safari') ? 'Safari' : 'Browser'} — {navigator.platform}</h4>
+              <span>Ultima activitate: {new Date().toLocaleDateString('ro-RO', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
             </div>
             <span className="text-xs font-semibold text-[#4caf50] py-0.5 px-2.5 bg-[#e8f5e9] rounded-sm">Activ</span>
           </div>
