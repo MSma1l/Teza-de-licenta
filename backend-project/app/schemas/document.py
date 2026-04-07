@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from datetime import datetime
 
 
@@ -27,10 +27,10 @@ class DocumentResponse(BaseModel):
 
 
 class DocumentUpdateRequest(BaseModel):
-    title: str | None = None
-    description: str | None = None
-    document_type: str | None = None
-    status: str | None = None
+    title: str | None = Field(default=None, max_length=300)
+    description: str | None = Field(default=None, max_length=2000)
+    document_type: str | None = Field(default=None, max_length=50)
+    status: str | None = Field(default=None, max_length=30)
 
 
 class DocumentListResponse(BaseModel):

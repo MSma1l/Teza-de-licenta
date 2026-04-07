@@ -8,10 +8,48 @@ import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 
 import Navbar from '../../components/Navbar/Navbar';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
+
+const t = {
+  ro: {
+    title: 'Bine ai venit!',
+    userPlaceholder: 'Nume, Email sau Telefon',
+    passPlaceholder: 'Parola',
+    submit: 'LOGARE',
+    loading: 'SE CONECTEAZA...',
+    noAccount: 'Nu ai cont?',
+    register: 'Inregistreaza-te',
+    errorEmpty: 'Completeaza toate campurile',
+    errorGeneric: 'Eroare la autentificare',
+  },
+  en: {
+    title: 'Welcome!',
+    userPlaceholder: 'Name, Email or Phone',
+    passPlaceholder: 'Password',
+    submit: 'LOGIN',
+    loading: 'CONNECTING...',
+    noAccount: "Don't have an account?",
+    register: 'Register',
+    errorEmpty: 'Fill in all fields',
+    errorGeneric: 'Authentication error',
+  },
+  ru: {
+    title: 'Добро пожаловать!',
+    userPlaceholder: 'Имя, Email или Телефон',
+    passPlaceholder: 'Пароль',
+    submit: 'ВХОД',
+    loading: 'ПОДКЛЮЧЕНИЕ...',
+    noAccount: 'Нет аккаунта?',
+    register: 'Зарегистрироваться',
+    errorEmpty: 'Заполните все поля',
+    errorGeneric: 'Ошибка аутентификации',
+  },
+};
 
 const SignIn = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { lang } = useLanguage();
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -19,12 +57,14 @@ const SignIn = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const tr = t[lang];
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
     if (!username.trim() || !password.trim()) {
-      setError('Completează toate câmpurile');
+      setError(tr.errorEmpty);
       return;
     }
 
@@ -33,7 +73,7 @@ const SignIn = () => {
       await login({ username: username.trim(), password });
       navigate('/home');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Eroare la autentificare');
+      setError(err instanceof Error ? err.message : tr.errorGeneric);
     } finally {
       setLoading(false);
     }
@@ -46,30 +86,15 @@ const SignIn = () => {
       <div className="flex-1 flex justify-center items-center p-8 relative z-[1]">
         {/* Forme animate de fundal */}
         <div className="absolute inset-0 overflow-hidden z-0 pointer-events-none">
-          <div
-            className="absolute rounded-full blur-[80px] opacity-35 animate-float-1"
-            style={{ width: 400, height: 400, top: -100, left: -100, background: 'radial-gradient(circle, #8a9a6a, #6b7a4e)' }}
-          />
-          <div
-            className="absolute rounded-full blur-[80px] opacity-35 animate-float-2"
-            style={{ width: 350, height: 350, bottom: -80, right: -80, background: 'radial-gradient(circle, #2a5a6a, #1a3a4a)' }}
-          />
-          <div
-            className="absolute rounded-full blur-[80px] opacity-35 animate-float-3"
-            style={{ width: 200, height: 200, top: '40%', right: '15%', background: 'radial-gradient(circle, #3a8a8a, #1a5a6a)' }}
-          />
-          <div
-            className="absolute rounded-full blur-[80px] opacity-35 animate-float-4"
-            style={{ width: 180, height: 180, bottom: '20%', left: '10%', background: 'radial-gradient(circle, #a8b878, #8a9a6a)' }}
-          />
-          <div
-            className="absolute rounded-full blur-[80px] opacity-35 animate-float-5"
-            style={{ width: 150, height: 150, top: '15%', left: '55%', background: 'radial-gradient(circle, #4a7a8a, #2a5a6a)' }}
-          />
+          <div className="absolute rounded-full blur-[80px] opacity-35 animate-float-1" style={{ width: 400, height: 400, top: -100, left: -100, background: 'radial-gradient(circle, #8a9a6a, #6b7a4e)' }} />
+          <div className="absolute rounded-full blur-[80px] opacity-35 animate-float-2" style={{ width: 350, height: 350, bottom: -80, right: -80, background: 'radial-gradient(circle, #2a5a6a, #1a3a4a)' }} />
+          <div className="absolute rounded-full blur-[80px] opacity-35 animate-float-3" style={{ width: 200, height: 200, top: '40%', right: '15%', background: 'radial-gradient(circle, #3a8a8a, #1a5a6a)' }} />
+          <div className="absolute rounded-full blur-[80px] opacity-35 animate-float-4" style={{ width: 180, height: 180, bottom: '20%', left: '10%', background: 'radial-gradient(circle, #a8b878, #8a9a6a)' }} />
+          <div className="absolute rounded-full blur-[80px] opacity-35 animate-float-5" style={{ width: 150, height: 150, top: '15%', left: '55%', background: 'radial-gradient(circle, #4a7a8a, #2a5a6a)' }} />
         </div>
 
         <div className="bg-white/95 backdrop-blur-[20px] border border-white/20 rounded-xl px-16 py-12 w-full max-w-[480px] relative z-[2] animate-scale-in shadow-[0_8px_40px_rgba(0,0,0,0.3),0_0_80px_rgba(138,154,106,0.08)]">
-          <h1 className="font-heading text-[2rem] font-bold text-primary text-center mb-8">Hello !</h1>
+          <h1 className="font-heading text-[2rem] font-bold text-primary text-center mb-8">{tr.title}</h1>
 
           {error && <p className="text-red-600 text-sm text-center mb-4">{error}</p>}
 
@@ -81,7 +106,7 @@ const SignIn = () => {
               <input
                 type="text"
                 className="flex-1 bg-transparent text-base text-primary font-medium placeholder:text-primary placeholder:font-medium"
-                placeholder="Name, Email, Contact number"
+                placeholder={tr.userPlaceholder}
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 disabled={loading}
@@ -95,7 +120,7 @@ const SignIn = () => {
               <input
                 type={showPassword ? 'text' : 'password'}
                 className="flex-1 bg-transparent text-base text-primary font-medium placeholder:text-primary placeholder:font-medium"
-                placeholder="Password"
+                placeholder={tr.passPlaceholder}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
@@ -110,20 +135,20 @@ const SignIn = () => {
 
             <button
               type="submit"
-              className="mt-3 px-8 py-3 bg-primary text-white rounded-full text-base font-semibold tracking-[1px] self-center transition-all duration-200 hover:bg-primary-light hover:-translate-y-0.5 hover:shadow-md disabled:opacity-60"
+              className="btn-gradient mt-3 px-8 py-3 rounded-full text-base tracking-[1px] self-center font-bold"
               disabled={loading}
             >
-              {loading ? 'SE CONECTEAZĂ...' : 'SIGN IN'}
+              {loading ? tr.loading : tr.submit}
             </button>
           </form>
 
           <div className="text-center mt-5 text-sm text-neutral-500">
-            <span className="text-primary cursor-pointer">Already registered? </span>
+            <span>{tr.noAccount} </span>
             <span
               className="font-bold text-neutral-black cursor-pointer transition-colors duration-200 hover:text-primary"
               onClick={() => navigate('/signup')}
             >
-              Sign up
+              {tr.register}
             </span>
           </div>
         </div>

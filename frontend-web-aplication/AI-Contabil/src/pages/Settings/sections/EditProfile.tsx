@@ -1,28 +1,86 @@
-/* ============================================
-   SECȚIUNEA EDIT PROFILE
-
-   Formularul de editare profil cu:
-   - Avatar + buton "Edit profile photo"
-   - Câmpuri: Name, Email (cu verificare), Contact Number
-   - Buton salvare
-
-   NOTĂ: Datele vor veni din API în viitor.
-   ============================================ */
-
 import { useState, useEffect, useRef } from 'react';
-
-/* Importăm iconițe Material UI */
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import CheckBoxIcon from '@mui/icons-material/CheckBox';
-
-/* Importăm tipurile și API-ul */
 import type { UserProfile } from '../../../models/settingsTypes';
 import { fetchUserProfile, updateUserProfile, uploadAvatar } from '../../../api/settingsApi';
 import AlertToast from '../../../components/AlertToast/AlertToast';
+import { useLanguage } from '../../../context/LanguageContext';
+import type { Lang } from '../../../context/LanguageContext';
 
-/* --- Componenta EditProfile --- */
+const t: Record<Lang, {
+  title: string;
+  name: string;
+  namePlaceholder: string;
+  email: string;
+  contactNumber: string;
+  phonePlaceholder: string;
+  saving: string;
+  save: string;
+  editPhoto: string;
+  success: string;
+  error: string;
+  profileSaved: string;
+  avatarUpdated: string;
+  saveError: string;
+  avatarError: string;
+}> = {
+  ro: {
+    title: 'Editare profil',
+    name: 'Nume',
+    namePlaceholder: 'Numele dumneavoastra',
+    email: 'Email',
+    contactNumber: 'Numar de telefon',
+    phonePlaceholder: '+373 XXXXX XXX',
+    saving: 'Se salveaza...',
+    save: 'Salveaza',
+    editPhoto: 'Schimba fotografia',
+    success: 'Succes',
+    error: 'Eroare',
+    profileSaved: 'Profilul a fost salvat cu succes!',
+    avatarUpdated: 'Avatar actualizat!',
+    saveError: 'Eroare la salvare',
+    avatarError: 'Eroare la upload avatar',
+  },
+  en: {
+    title: 'Edit Profile',
+    name: 'Name',
+    namePlaceholder: 'Your name',
+    email: 'Email',
+    contactNumber: 'Contact Number',
+    phonePlaceholder: '+373 XXXXX XXX',
+    saving: 'Saving...',
+    save: 'Save Changes',
+    editPhoto: 'Edit profile photo',
+    success: 'Success',
+    error: 'Error',
+    profileSaved: 'Profile saved successfully!',
+    avatarUpdated: 'Avatar updated!',
+    saveError: 'Save error',
+    avatarError: 'Avatar upload error',
+  },
+  ru: {
+    title: 'Редактирование профиля',
+    name: 'Имя',
+    namePlaceholder: 'Ваше имя',
+    email: 'Электронная почта',
+    contactNumber: 'Номер телефона',
+    phonePlaceholder: '+373 XXXXX XXX',
+    saving: 'Сохранение...',
+    save: 'Сохранить',
+    editPhoto: 'Изменить фото',
+    success: 'Успех',
+    error: 'Ошибка',
+    profileSaved: 'Профиль успешно сохранён!',
+    avatarUpdated: 'Аватар обновлён!',
+    saveError: 'Ошибка сохранения',
+    avatarError: 'Ошибка загрузки аватара',
+  },
+};
+
 const EditProfile = () => {
-  /* State pentru datele profilului */
+  const { lang } = useLanguage();
+  const tr = t[lang];
+
   const [profile, setProfile] = useState<UserProfile>({
     name: '',
     email: '',
@@ -30,45 +88,38 @@ const EditProfile = () => {
     avatarUrl: '',
   });
 
-  /* State pentru email verificat */
   const [isEmailVerified] = useState(false);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  /* Încărcăm datele profilului de la API */
   useEffect(() => {
     const load = async () => {
       try {
         const data = await fetchUserProfile();
         setProfile(data);
-      } catch {
-        /* profilul rămâne gol */
-      }
+      } catch { /* */ }
     };
     load();
   }, []);
 
-  /* Handler pentru schimbarea câmpurilor */
   const handleChange = (field: keyof UserProfile, value: string) => {
     setProfile((prev) => ({ ...prev, [field]: value }));
   };
 
-  /* Handler pentru salvare - conectat la API */
   const handleSave = async () => {
     setSaving(true);
     try {
       const updated = await updateUserProfile(profile);
       setProfile(updated);
-      setToast({ message: 'Profilul a fost salvat cu succes!', type: 'success' });
+      setToast({ message: tr.profileSaved, type: 'success' });
     } catch (e: any) {
-      setToast({ message: e.message || 'Eroare la salvare', type: 'error' });
+      setToast({ message: e.message || tr.saveError, type: 'error' });
     } finally {
       setSaving(false);
     }
   };
 
-  /* Handler pentru schimbarea avatarului - conectat la API */
   const handleAvatarChange = () => {
     fileInputRef.current?.click();
   };
@@ -79,36 +130,31 @@ const EditProfile = () => {
     try {
       const avatarUrl = await uploadAvatar(file);
       setProfile((prev) => ({ ...prev, avatarUrl }));
-      setToast({ message: 'Avatar actualizat!', type: 'success' });
+      setToast({ message: tr.avatarUpdated, type: 'success' });
     } catch (err: any) {
-      setToast({ message: err.message || 'Eroare la upload avatar', type: 'error' });
+      setToast({ message: err.message || tr.avatarError, type: 'error' });
     }
   };
 
   return (
-    <div className="p-8 px-12 animate-fade-in">
-      {/* === Titlul secțiunii === */}
-      <h1 className="font-heading text-2xl font-bold text-neutral-black mb-12">Edit Profile</h1>
+    <div className="p-8 px-12 max-md:px-6 animate-fade-in">
+      <h1 className="font-heading text-2xl font-bold text-neutral-black mb-12">{tr.title}</h1>
 
-      {/* === Container principal (formular + avatar) === */}
-      <div className="flex gap-16">
-        {/* --- Formularul din stânga --- */}
+      <div className="flex gap-16 max-md:flex-col max-md:items-center">
         <div className="flex-1 max-w-[500px] flex flex-col gap-6">
-          {/* Câmpul Name */}
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-semibold text-neutral-black">Name</label>
+            <label className="text-sm font-semibold text-neutral-black">{tr.name}</label>
             <input
               type="text"
               className="w-full py-3 px-6 border border-neutral-300 rounded-lg text-base text-neutral-600 bg-white transition-colors duration-200 focus:border-primary focus:ring-2 focus:ring-primary/10 focus:outline-none"
               value={profile.name}
               onChange={(e) => handleChange('name', e.target.value)}
-              placeholder="Numele dumneavoastră"
+              placeholder={tr.namePlaceholder}
             />
           </div>
 
-          {/* Câmpul Email cu verificare */}
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-semibold text-neutral-black">Email</label>
+            <label className="text-sm font-semibold text-neutral-black">{tr.email}</label>
             <div className="relative flex items-center">
               <input
                 type="email"
@@ -125,29 +171,26 @@ const EditProfile = () => {
             </div>
           </div>
 
-          {/* Câmpul Contact Number */}
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-semibold text-neutral-black">Contact Number</label>
+            <label className="text-sm font-semibold text-neutral-black">{tr.contactNumber}</label>
             <input
               type="tel"
               className="w-full py-3 px-6 border border-neutral-300 rounded-lg text-base text-neutral-600 bg-white transition-colors duration-200 focus:border-primary focus:ring-2 focus:ring-primary/10 focus:outline-none"
               value={profile.contactNumber}
               onChange={(e) => handleChange('contactNumber', e.target.value)}
-              placeholder="+373 XXXXX XXX"
+              placeholder={tr.phonePlaceholder}
             />
           </div>
 
-          {/* Butonul de salvare */}
           <button
-            className="mt-3 py-3 px-12 bg-primary text-white rounded-full text-base font-semibold self-start transition-all duration-200 hover:bg-primary-light hover:-translate-y-0.5 hover:shadow-md disabled:opacity-50"
+            className="btn-gradient mt-3 py-3 px-12 rounded-full text-base self-start"
             onClick={handleSave}
             disabled={saving}
           >
-            {saving ? 'Se salvează...' : 'Save Changes'}
+            {saving ? tr.saving : tr.save}
           </button>
         </div>
 
-        {/* --- Avatarul din dreapta --- */}
         <div className="flex flex-col items-center gap-3">
           <div className="w-30 h-30 rounded-full border-3 border-neutral-black flex items-center justify-center overflow-hidden bg-neutral-100 [&_img]:w-full [&_img]:h-full [&_img]:object-cover">
             {profile.avatarUrl ? (
@@ -167,14 +210,14 @@ const EditProfile = () => {
             className="text-sm text-[#1a73e8] cursor-pointer transition-opacity duration-200 hover:opacity-70"
             onClick={handleAvatarChange}
           >
-            Edit profile photo
+            {tr.editPhoto}
           </span>
         </div>
       </div>
 
       {toast && (
         <AlertToast
-          title={toast.type === 'success' ? 'Succes' : 'Eroare'}
+          title={toast.type === 'success' ? tr.success : tr.error}
           message={toast.message}
           type={toast.type}
           onClose={() => setToast(null)}

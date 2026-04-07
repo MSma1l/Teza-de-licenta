@@ -6,7 +6,7 @@
    cererilor autentificate.
    ============================================ */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3777/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3777/api/v1/ac';
 
 /* --- Obține token-ul din localStorage --- */
 function getToken(): string | null {

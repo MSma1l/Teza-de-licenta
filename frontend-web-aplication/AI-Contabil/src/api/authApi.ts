@@ -18,6 +18,13 @@ export interface RegisterData {
   password: string;
   phone?: string;
   full_name?: string;
+  company_name?: string;
+  idno?: string;
+  vat_code?: string;
+  legal_address?: string;
+  bank_name?: string;
+  iban?: string;
+  director_name?: string;
 }
 
 export interface TokenResponse {

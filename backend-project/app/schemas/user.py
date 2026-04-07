@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime
 
 
@@ -20,15 +20,15 @@ class UserResponse(BaseModel):
 
 
 class UserUpdateRequest(BaseModel):
-    full_name: str | None = None
-    phone: str | None = None
+    full_name: str | None = Field(default=None, max_length=200)
+    phone: str | None = Field(default=None, max_length=20)
     email: EmailStr | None = None
 
 
 class PasswordChangeRequest(BaseModel):
-    current_password: str
-    new_password: str
-    confirm_password: str
+    current_password: str = Field(max_length=128)
+    new_password: str = Field(min_length=8, max_length=128)
+    confirm_password: str = Field(max_length=128)
 
 
 class UserListResponse(BaseModel):

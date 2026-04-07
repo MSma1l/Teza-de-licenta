@@ -3,6 +3,7 @@ import Footer from '../../components/Footer/Footer';
 
 import HeroSection from './sections/HeroSection';
 import AboutSection from './sections/AboutSection';
+import LawsSection from './sections/LawsSection';
 import StagesSection from './sections/StagesSection';
 import DocumentsSection from './sections/DocumentsSection';
 import NewsSection from './sections/NewsSection';
@@ -14,19 +15,20 @@ interface HomeProps {
 
 const Home = ({ isLoggedIn = false }: HomeProps) => {
   return (
-    <div className="min-h-screen bg-white animate-fade-in">
+    <div className="min-h-screen bg-white animate-fade-in flex flex-col">
       <Navbar isLoggedIn={isLoggedIn} showNavLinks={true} />
 
-      <div className="max-w-[1200px] mx-auto">
+      <div className="w-[85%] max-md:w-full max-md:px-4 mx-auto flex-1">
         <HeroSection />
         <AboutSection />
+        <LawsSection />
         <StagesSection />
         <DocumentsSection />
         <NewsSection />
         <ConnectSection />
       </div>
 
-      <Footer showChat={isLoggedIn} />
+      <Footer isLoggedIn={isLoggedIn} />
     </div>
   );
 };

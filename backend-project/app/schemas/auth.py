@@ -1,28 +1,45 @@
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 import re
+
+COMMON_PASSWORDS = {
+    "12345678", "123456789", "1234567890", "password", "password1",
+    "qwerty123", "abcdefgh", "admin123", "letmein1", "welcome1",
+    "iloveyou", "trustno1", "sunshine1", "princess1", "football1",
+}
 
 
 class RegisterRequest(BaseModel):
-    username: str
+    username: str = Field(min_length=3, max_length=100)
     email: EmailStr
-    password: str
-    phone: str | None = None
-    full_name: str | None = None
+    password: str = Field(min_length=8, max_length=128)
+    phone: str | None = Field(default=None, max_length=20)
+    full_name: str | None = Field(default=None, max_length=200)
 
     @field_validator("username")
     @classmethod
     def username_valid(cls, v: str) -> str:
+        v = v.strip()
         if len(v) < 3:
-            raise ValueError("Username-ul trebuie să aibă minim 3 caractere")
+            raise ValueError("Username-ul trebuie sa aiba minim 3 caractere")
         if len(v) > 100:
-            raise ValueError("Username-ul nu poate depăși 100 caractere")
-        return v.strip()
+            raise ValueError("Username-ul nu poate depasi 100 caractere")
+        return v
 
     @field_validator("password")
     @classmethod
     def password_strong(cls, v: str) -> str:
-        if len(v) < 6:
-            raise ValueError("Parola trebuie să aibă minim 6 caractere")
+        if len(v) < 8:
+            raise ValueError("Parola trebuie sa aiba minim 8 caractere")
+        if len(v) > 128:
+            raise ValueError("Parola nu poate depasi 128 caractere")
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("Parola trebuie sa contina cel putin o litera majuscula")
+        if not re.search(r"[a-z]", v):
+            raise ValueError("Parola trebuie sa contina cel putin o litera minuscula")
+        if not re.search(r"\d", v):
+            raise ValueError("Parola trebuie sa contina cel putin o cifra")
+        if v.lower() in COMMON_PASSWORDS:
+            raise ValueError("Parola este prea comuna. Alege una mai sigura.")
         return v
 
     @field_validator("phone")
@@ -31,13 +48,13 @@ class RegisterRequest(BaseModel):
         if v is None:
             return v
         if not re.match(r"^\+?[0-9]{7,15}$", v):
-            raise ValueError("Numărul de telefon este invalid")
+            raise ValueError("Numarul de telefon este invalid")
         return v
 
 
 class LoginRequest(BaseModel):
-    username: str
-    password: str
+    username: str = Field(max_length=100)
+    password: str = Field(max_length=128)
 
 
 class TokenResponse(BaseModel):

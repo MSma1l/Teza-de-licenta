@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 /* === TEMA TAILWIND PERSONALIZATA === */
@@ -28,6 +28,7 @@
 
   /* Fonturi */
   --font-heading: 'Playfair Display', serif;
+  --font-body: 'DM Sans', sans-serif;
   --font-sans: 'Inter', sans-serif;
 
   /* Animatii */
@@ -44,6 +45,14 @@
   --animate-float-3: authFloat3 22s ease-in-out infinite;
   --animate-float-4: authFloat4 25s ease-in-out infinite;
   --animate-float-5: authFloat5 19s ease-in-out infinite;
+  --animate-hero-zoom: heroZoom 14s ease-in-out infinite alternate;
+  --animate-blink: heroBlink 1.5s ease-in-out infinite;
+  --animate-fade-up: heroFadeUp 0.8s ease forwards;
+  --animate-fade-up-1: heroFadeUp 0.8s ease 0.1s forwards;
+  --animate-fade-up-2: heroFadeUp 0.8s ease 0.2s forwards;
+  --animate-fade-up-3: heroFadeUp 0.8s ease 0.35s forwards;
+  --animate-fade-up-4: heroFadeUp 0.8s ease 0.5s forwards;
+  --animate-fade-up-5: heroFadeUp 0.8s ease 0.65s forwards;
 }
 
 /* === KEYFRAMES === */
@@ -80,6 +89,15 @@
 @keyframes stageFadeIn {
   from { opacity: 0; transform: scale(0.97); }
   to { opacity: 1; transform: scale(1); }
+}
+
+/* Screenshot placeholder - shows when image loads, hides fallback */
+.screenshot-fallback {
+  transition: opacity 0.3s ease;
+}
+img[src]:not([src=""]) + .screenshot-fallback,
+img:not([style*="display: none"]) + .screenshot-fallback {
+  /* Fallback visible until image loads */
 }
 
 @keyframes authGradientShift {
@@ -120,6 +138,21 @@
   50% { transform: translateX(-50px) scale(1.08); }
 }
 
+@keyframes heroZoom {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.06); }
+}
+
+@keyframes heroBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+@keyframes heroFadeUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* === STILURI DE BAZA === */
 html {
   scroll-behavior: smooth;
@@ -127,8 +160,9 @@ html {
 
 body {
   font-family: var(--font-sans);
+  font-size: 16px;
   color: var(--color-neutral-black);
-  line-height: 1.6;
+  line-height: 1.7;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -153,4 +187,118 @@ input {
   border: none;
   outline: none;
   font-family: var(--font-sans);
+}
+
+/* === BUTON PRIMARY GRADIENT (global) === */
+.btn-gradient {
+  position: relative;
+  background: linear-gradient(135deg, #4f46e5 0%, #0ea5e9 100%);
+  background-size: 200% 200%;
+  background-position: 0% 50%;
+  color: #fff;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  border: none;
+  cursor: pointer;
+  transition: transform 0.3s cubic-bezier(.4,0,.2,1),
+              box-shadow 0.3s cubic-bezier(.4,0,.2,1),
+              background-position 0.5s ease;
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.25);
+  overflow: hidden;
+}
+.btn-gradient::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.25) 0%, transparent 50%, rgba(255,255,255,0.1) 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+.btn-gradient:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 10px 30px rgba(79, 70, 229, 0.4),
+              0 0 20px rgba(14, 165, 233, 0.15);
+  background-position: 100% 50%;
+}
+.btn-gradient:hover::before {
+  opacity: 1;
+}
+.btn-gradient:active {
+  transform: translateY(-1px) scale(0.98);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+}
+.btn-gradient:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+  background-position: 0% 50%;
+}
+.btn-gradient:disabled::before {
+  display: none;
+}
+
+/* === NAVBAR GLASS EFFECT === */
+.navbar-glass {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 12px rgba(0, 0, 0, 0.04);
+}
+
+/* === NAV ICON HOVER === */
+.nav-icon-hover {
+  transition: all 0.3s cubic-bezier(.4,0,.2,1);
+}
+.nav-icon-hover:hover {
+  color: #4f46e5;
+  background: rgba(79, 70, 229, 0.08);
+  transform: translateY(-2px) scale(1.1);
+  border-radius: 10px;
+}
+
+/* === LOGO HOVER ANIMATION === */
+.logo-hover {
+  position: relative;
+  display: inline-block;
+  background: linear-gradient(135deg, #1a1a1a 0%, #1a1a1a 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  transition: transform 0.3s cubic-bezier(.4,0,.2,1),
+              letter-spacing 0.3s cubic-bezier(.4,0,.2,1);
+}
+.logo-hover:hover {
+  background: linear-gradient(135deg, #4f46e5 0%, #0ea5e9 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  transform: scale(1.05);
+  letter-spacing: 0.18em;
+}
+
+/* === NAV LINK HOVER (gradient underline) === */
+.nav-link-hover {
+  position: relative;
+  transition: color 0.3s ease;
+}
+.nav-link-hover::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #4f46e5, #0ea5e9);
+  border-radius: 2px;
+  transition: width 0.3s cubic-bezier(.4,0,.2,1), left 0.3s cubic-bezier(.4,0,.2,1);
+}
+.nav-link-hover:hover {
+  color: #4f46e5;
+}
+.nav-link-hover:hover::after {
+  width: 100%;
+  left: 0;
 }

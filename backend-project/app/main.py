@@ -5,13 +5,13 @@ import os
 
 from app.core.config import settings
 from app.core.database import engine, Base
-from app.api.routes import auth, users, documents, reports, notifications, training
+from app.api.routes import auth, users, documents, reports, notifications, training, chat
 
 # Import all models so they are registered with Base
 from app.models import (  # noqa: F401
     user, document, report, notification, accountant_client,
     company, extracted_field, recommendation, training_example,
-    model_version, audit_log, document_embedding,
+    model_version, audit_log, document_embedding, faq,
 )
 
 # Create tables (in production use Alembic migrations, skip in testing)
@@ -29,8 +29,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins_list,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
+    max_age=3600,
 )
 
 # Static files for uploads
@@ -40,14 +41,15 @@ if os.path.isdir("storage"):
     app.mount("/storage", StaticFiles(directory="storage"), name="storage")
 
 # Routes
-app.include_router(auth.router, prefix="/api")
-app.include_router(users.router, prefix="/api")
-app.include_router(documents.router, prefix="/api")
-app.include_router(reports.router, prefix="/api")
-app.include_router(notifications.router, prefix="/api")
-app.include_router(training.router, prefix="/api")
+app.include_router(auth.router, prefix="/api/v1/ac")
+app.include_router(users.router, prefix="/api/v1/ac")
+app.include_router(documents.router, prefix="/api/v1/ac")
+app.include_router(reports.router, prefix="/api/v1/ac")
+app.include_router(notifications.router, prefix="/api/v1/ac")
+app.include_router(training.router, prefix="/api/v1/ac")
+app.include_router(chat.router, prefix="/api/v1/ac")
 
 
-@app.get("/api/health")
+@app.get("/api/v1/ac/health")
 def health_check():
     return {"status": "ok", "message": "AI-Contabil API funcționează"}

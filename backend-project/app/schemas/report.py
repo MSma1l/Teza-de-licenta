@@ -1,22 +1,22 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from datetime import datetime
 
 
 class ReportCreateRequest(BaseModel):
-    client_id: str
-    title: str
-    description: str | None = None
-    report_type: str
-    period_start: str | None = None
-    period_end: str | None = None
-    content: str | None = None
+    client_id: str = Field(max_length=36)
+    title: str = Field(min_length=1, max_length=300)
+    description: str | None = Field(default=None, max_length=2000)
+    report_type: str = Field(max_length=50)
+    period_start: str | None = Field(default=None, max_length=20)
+    period_end: str | None = Field(default=None, max_length=20)
+    content: str | None = Field(default=None, max_length=50000)
 
 
 class ReportUpdateRequest(BaseModel):
-    title: str | None = None
-    description: str | None = None
-    status: str | None = None
-    content: str | None = None
+    title: str | None = Field(default=None, max_length=300)
+    description: str | None = Field(default=None, max_length=2000)
+    status: str | None = Field(default=None, max_length=30)
+    content: str | None = Field(default=None, max_length=50000)
 
 
 class ReportResponse(BaseModel):
