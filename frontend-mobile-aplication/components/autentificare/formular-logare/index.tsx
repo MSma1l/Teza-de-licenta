@@ -5,20 +5,23 @@ import {
   Platform,
   ScrollView,
   Pressable,
+  StyleSheet,
 } from 'react-native';
 import { Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Controller } from 'react-hook-form';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons';
 
 import { CampFormular } from '@/components/ui/camp-formular';
 import { Buton } from '@/components/ui/buton';
+import { CuloriApp } from '@/constants/culori';
 import { useFormularLogare } from './use-formular-logare';
 import { styles } from './styles';
 
 export function FormularLogare() {
   const insets = useSafeAreaInsets();
-  const { control, errors, seIncarca, trimite } = useFormularLogare();
+  const { control, errors, seIncarca, mesajEroare, stergeEroare, trimite } = useFormularLogare();
 
   return (
     <KeyboardAvoidingView
@@ -46,7 +49,11 @@ export function FormularLogare() {
                   iconita="person-outline"
                   placeholder="Username"
                   value={value}
-                  onChangeText={onChange}
+                  onChangeText={(v) => {
+                    stergeEroare();
+                    // Limita lungime + filtru caractere periculoase din input direct
+                    onChange(v.replace(/[<>"'`]/g, '').slice(0, 100));
+                  }}
                   onBlur={onBlur}
                   autoCapitalize="none"
                   eroare={errors.numeUtilizator?.message}
@@ -62,13 +69,23 @@ export function FormularLogare() {
                   iconita="lock-closed-outline"
                   placeholder="Password"
                   value={value}
-                  onChangeText={onChange}
+                  onChangeText={(v) => {
+                    stergeEroare();
+                    onChange(v.slice(0, 128));
+                  }}
                   onBlur={onBlur}
                   secureTextEntry
                   eroare={errors.parola?.message}
                 />
               )}
             />
+
+            {mesajEroare !== '' && (
+              <Animated.View entering={FadeIn.duration(250)} style={stiluriEroare.container}>
+                <Ionicons name="alert-circle" size={20} color={CuloriApp.eroare} />
+                <Text style={stiluriEroare.text}>{mesajEroare}</Text>
+              </Animated.View>
+            )}
 
             <Pressable style={styles.linkParolaUitata}>
               <Text style={styles.textParolaUitata}>Forgot your password?</Text>
@@ -96,3 +113,26 @@ export function FormularLogare() {
     </KeyboardAvoidingView>
   );
 }
+
+const stiluriEroare = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: CuloriApp.eroareFundal,
+    borderWidth: 1,
+    borderColor: CuloriApp.eroare,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  text: {
+    flex: 1,
+    fontSize: 13,
+    color: CuloriApp.eroare,
+    fontWeight: '600',
+    lineHeight: 18,
+  },
+});

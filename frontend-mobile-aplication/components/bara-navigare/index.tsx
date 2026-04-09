@@ -2,6 +2,7 @@ import { View, Pressable, Platform } from 'react-native';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { CuloriApp } from '@/constants/culori';
 import { styles } from './styles';
 
 let BlurView: React.ComponentType<any> | null = null;
@@ -13,11 +14,11 @@ if (Platform.OS !== 'web') {
 }
 
 const ICONITE_TAB: Record<string, keyof typeof Ionicons.glyphMap> = {
-  index: 'home-outline',
-  meniu: 'menu-outline',
+  index: 'chatbubbles-outline',
+  meniu: 'documents-outline',
   creare: 'add',
-  notificari: 'notifications-outline',
-  profil: 'people-outline',
+  notificari: 'shield-checkmark-outline',
+  profil: 'person-circle-outline',
 };
 
 const TABURI_ASCUNSE = ['explore'];
@@ -81,7 +82,7 @@ export function BaraNavigare({ state, navigation }: BottomTabBarProps) {
               <Ionicons
                 name={numeIconita}
                 size={24}
-                color={esteActiv ? '#1A1A1A' : '#999999'}
+                color={esteActiv ? CuloriApp.primar : CuloriApp.baraNavInactiv}
               />
             </Pressable>
           );

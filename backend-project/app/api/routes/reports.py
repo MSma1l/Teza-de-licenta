@@ -1,6 +1,21 @@
+import io
+
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
+
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import cm
+from reportlab.lib import colors
+from reportlab.platypus import (
+    SimpleDocTemplate,
+    Paragraph,
+    Spacer,
+    Table,
+    TableStyle,
+)
 
 from app.core.database import get_db
 from app.models.user import User, UserRole
@@ -10,6 +25,138 @@ from app.schemas.report import ReportCreateRequest, ReportUpdateRequest, ReportR
 from app.api.deps import get_current_user, require_role
 
 router = APIRouter(prefix="/reports", tags=["Rapoarte"])
+
+
+def _safe_filename(text: str) -> str:
+    """Sanitizeaza un string pentru a fi folosit ca nume de fisier."""
+    keep = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_"
+    return "".join(c if c in keep else "_" for c in text)[:60]
+
+
+def _build_report_pdf(report: Report, owner_name: str | None) -> io.BytesIO:
+    """Genereaza un PDF profesional dintr-un raport."""
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buf,
+        pagesize=A4,
+        leftMargin=2 * cm,
+        rightMargin=2 * cm,
+        topMargin=2 * cm,
+        bottomMargin=2 * cm,
+        title=report.title,
+        author="AI-Contabil",
+    )
+
+    styles = getSampleStyleSheet()
+    style_titlu = ParagraphStyle(
+        "TitluRaport",
+        parent=styles["Heading1"],
+        fontSize=20,
+        textColor=colors.HexColor("#4f46e5"),
+        spaceAfter=12,
+        alignment=1,  # center
+    )
+    style_subtitlu = ParagraphStyle(
+        "SubtitluRaport",
+        parent=styles["Normal"],
+        fontSize=11,
+        textColor=colors.HexColor("#64748b"),
+        alignment=1,
+        spaceAfter=20,
+    )
+    style_eticheta = ParagraphStyle(
+        "Eticheta",
+        parent=styles["Normal"],
+        fontSize=10,
+        textColor=colors.HexColor("#64748b"),
+        fontName="Helvetica-Bold",
+    )
+    style_valoare = ParagraphStyle(
+        "Valoare",
+        parent=styles["Normal"],
+        fontSize=11,
+        textColor=colors.HexColor("#1e1b4b"),
+    )
+    style_continut = ParagraphStyle(
+        "Continut",
+        parent=styles["Normal"],
+        fontSize=11,
+        textColor=colors.HexColor("#1e293b"),
+        leading=16,
+        spaceAfter=10,
+    )
+
+    elements = []
+
+    # Header
+    elements.append(Paragraph("AI-CONTABIL", style_titlu))
+    elements.append(Paragraph("Raport contabil", style_subtitlu))
+
+    # Tabel cu metadate
+    metadate = [
+        ["Titlu:", report.title or "-"],
+        ["Tip raport:", report.report_type or "-"],
+        ["Status:", str(report.status) or "-"],
+        ["Perioada:", f"{report.period_start or '-'}  ->  {report.period_end or '-'}"],
+        ["Client ID:", report.client_id or "-"],
+        ["Generat pentru:", owner_name or "-"],
+        ["Data generarii:", datetime.now(timezone.utc).strftime("%d.%m.%Y %H:%M UTC")],
+    ]
+    tabel = Table(metadate, colWidths=[4.5 * cm, 12 * cm])
+    tabel.setStyle(
+        TableStyle(
+            [
+                ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+                ("FONTNAME", (1, 0), (1, -1), "Helvetica"),
+                ("FONTSIZE", (0, 0), (-1, -1), 10),
+                ("TEXTCOLOR", (0, 0), (0, -1), colors.HexColor("#64748b")),
+                ("TEXTCOLOR", (1, 0), (1, -1), colors.HexColor("#1e1b4b")),
+                ("ROWBACKGROUNDS", (0, 0), (-1, -1), [colors.whitesmoke, colors.white]),
+                ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                ("LINEBELOW", (0, 0), (-1, -1), 0.3, colors.HexColor("#e2e8f0")),
+            ]
+        )
+    )
+    elements.append(tabel)
+    elements.append(Spacer(1, 0.8 * cm))
+
+    # Descriere
+    if report.description:
+        elements.append(Paragraph("Descriere", style_eticheta))
+        elements.append(Spacer(1, 0.2 * cm))
+        elements.append(Paragraph(report.description, style_valoare))
+        elements.append(Spacer(1, 0.5 * cm))
+
+    # Continut principal
+    elements.append(Paragraph("Continut", style_eticheta))
+    elements.append(Spacer(1, 0.2 * cm))
+    continut = report.content or "Acest raport nu are continut text. Verificati anexele si datele atasate."
+    # Inlocuieste \n cu <br/> pentru paragraf
+    continut_html = continut.replace("\n", "<br/>")
+    elements.append(Paragraph(continut_html, style_continut))
+
+    # Footer
+    elements.append(Spacer(1, 1 * cm))
+    footer_style = ParagraphStyle(
+        "Footer",
+        parent=styles["Normal"],
+        fontSize=8,
+        textColor=colors.HexColor("#94a3b8"),
+        alignment=1,
+    )
+    elements.append(
+        Paragraph(
+            "Document generat automat de AI-Contabil &middot; ai-contabil.md",
+            footer_style,
+        )
+    )
+
+    doc.build(elements)
+    buf.seek(0)
+    return buf
 
 
 @router.post("/", response_model=ReportResponse, status_code=status.HTTP_201_CREATED)
@@ -122,6 +269,39 @@ def update_report(
     db.commit()
     db.refresh(report)
     return report
+
+
+@router.get("/{report_id}/pdf")
+def download_report_pdf(
+    report_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Genereaza si returneaza raportul ca PDF."""
+    report = db.query(Report).filter(Report.id == report_id).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="Raport negasit")
+
+    # Verificare permisiuni (acelasi cu get_report)
+    if current_user.role == UserRole.CLIENT and report.client_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Nu ai acces la acest raport")
+    if current_user.role == UserRole.CONTABIL and report.created_by != current_user.id:
+        raise HTTPException(status_code=403, detail="Nu ai acces la acest raport")
+
+    owner = db.query(User).filter(User.id == report.client_id).first()
+    owner_name = (owner.full_name or owner.username) if owner else None
+
+    pdf_buf = _build_report_pdf(report, owner_name)
+    nume_fisier = f"raport_{_safe_filename(report.title)}_{report.id[:8]}.pdf"
+
+    return StreamingResponse(
+        pdf_buf,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{nume_fisier}"',
+            "Cache-Control": "no-store",
+        },
+    )
 
 
 @router.delete("/{report_id}", status_code=status.HTTP_204_NO_CONTENT)

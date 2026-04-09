@@ -1,14 +1,15 @@
 import { useState } from 'react';
-import { Alert } from 'react-native';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
 import { schemaLogare, TipSchemaLogare } from '@/lib/validari/autentificare';
 import { useAutentificare } from '@/hooks/use-autentificare';
+import { sanitizeazaInput } from '@/lib/securitate/sanitizare';
 
 export function useFormularLogare() {
   const { logare } = useAutentificare();
   const [seIncarca, setSeIncarca] = useState(false);
+  const [mesajEroare, setMesajEroare] = useState('');
 
   const {
     control,
@@ -23,11 +24,18 @@ export function useFormularLogare() {
   });
 
   const laTrimitere = async (date: TipSchemaLogare) => {
+    setMesajEroare('');
     setSeIncarca(true);
     try {
-      await logare(date);
-    } catch {
-      Alert.alert('Eroare', 'Logarea a esuat. Verificati datele.');
+      // Sanitizare anti-XSS si anti-injection inainte de a trimite la backend
+      const dateSanitizate = {
+        numeUtilizator: sanitizeazaInput(date.numeUtilizator),
+        parola: date.parola, // parola NU se sanitizeaza, ramane raw
+      };
+      await logare(dateSanitizate);
+    } catch (err) {
+      const mesaj = err instanceof Error ? err.message : 'Logarea a esuat. Verificati datele.';
+      setMesajEroare(mesaj);
     } finally {
       setSeIncarca(false);
     }
@@ -37,6 +45,8 @@ export function useFormularLogare() {
     control,
     errors,
     seIncarca,
+    mesajEroare,
+    stergeEroare: () => setMesajEroare(''),
     trimite: handleSubmit(laTrimitere),
   };
 }

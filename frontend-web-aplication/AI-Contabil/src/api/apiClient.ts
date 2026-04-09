@@ -77,8 +77,9 @@ export async function apiRequest<T>(
       }
       return retryResponse.json();
     } else {
+      // Refresh esuat - sterge tokens, dar NU forta redirect.
+      // AuthContext va detecta lipsa user-ului si va trata ruta in functie de context.
       clearTokens();
-      window.location.href = '/signin';
       throw new Error('Sesiune expirată');
     }
   }

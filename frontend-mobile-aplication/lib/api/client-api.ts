@@ -1,6 +1,15 @@
 import { citesteToken, salveazaToken } from '@/lib/stocare/stocare-securizata';
 
-const URL_BAZA = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3777/api';
+const URL_BAZA = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3777/api/v1/ac';
+
+function extragMesajEroare(eroare: any): string {
+  if (!eroare) return 'Eroare la comunicarea cu serverul';
+  if (typeof eroare.detail === 'string') return eroare.detail;
+  if (Array.isArray(eroare.detail)) {
+    return eroare.detail.map((e: any) => e.msg || JSON.stringify(e)).join('; ');
+  }
+  return 'Eroare la comunicarea cu serverul';
+}
 
 interface OptiuniCerere {
   metoda?: 'GET' | 'POST' | 'PUT' | 'DELETE';
@@ -41,7 +50,7 @@ export async function cerereApi<T>(cale: string, optiuni: OptiuniCerere = {}): P
       });
       if (!raspunsNou.ok) {
         const eroare = await raspunsNou.json().catch(() => ({}));
-        throw new Error(eroare.detail || 'Eroare la comunicarea cu serverul');
+        throw new Error(extragMesajEroare(eroare));
       }
       return raspunsNou.json();
     } else {
@@ -51,7 +60,7 @@ export async function cerereApi<T>(cale: string, optiuni: OptiuniCerere = {}): P
 
   if (!raspuns.ok) {
     const eroare = await raspuns.json().catch(() => ({}));
-    throw new Error(eroare.detail || 'Eroare la comunicarea cu serverul');
+    throw new Error(extragMesajEroare(eroare));
   }
 
   if (raspuns.status === 204) {
@@ -77,7 +86,7 @@ export async function uploadApi<T>(cale: string, formData: FormData): Promise<T>
 
   if (!raspuns.ok) {
     const eroare = await raspuns.json().catch(() => ({}));
-    throw new Error(eroare.detail || 'Eroare la upload');
+    throw new Error(extragMesajEroare(eroare));
   }
 
   return raspuns.json();

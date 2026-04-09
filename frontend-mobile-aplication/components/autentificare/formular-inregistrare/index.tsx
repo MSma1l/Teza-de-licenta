@@ -5,21 +5,24 @@ import {
   Platform,
   ScrollView,
   Pressable,
+  StyleSheet,
 } from 'react-native';
 import { Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Controller } from 'react-hook-form';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons';
 
 import { CampFormular } from '@/components/ui/camp-formular';
 import { Buton } from '@/components/ui/buton';
 import { CaptchaCheckbox } from '@/components/ui/captcha-checkbox';
+import { CuloriApp } from '@/constants/culori';
 import { useFormularInregistrare } from './use-formular-inregistrare';
 import { styles } from './styles';
 
 export function FormularInregistrare() {
   const insets = useSafeAreaInsets();
-  const { control, errors, seIncarca, trimite, seteazaCaptcha } =
+  const { control, errors, seIncarca, mesajEroare, stergeEroare, trimite, seteazaCaptcha } =
     useFormularInregistrare();
 
   return (
@@ -47,7 +50,10 @@ export function FormularInregistrare() {
                   iconita="person-outline"
                   placeholder="Username"
                   value={value}
-                  onChangeText={onChange}
+                  onChangeText={(v) => {
+                    stergeEroare();
+                    onChange(v.replace(/[<>"'`]/g, '').slice(0, 100));
+                  }}
                   onBlur={onBlur}
                   autoCapitalize="none"
                   eroare={errors.numeUtilizator?.message}
@@ -63,7 +69,10 @@ export function FormularInregistrare() {
                   iconita="lock-closed-outline"
                   placeholder="Password"
                   value={value}
-                  onChangeText={onChange}
+                  onChangeText={(v) => {
+                    stergeEroare();
+                    onChange(v.slice(0, 128));
+                  }}
                   onBlur={onBlur}
                   secureTextEntry
                   eroare={errors.parola?.message}
@@ -79,7 +88,10 @@ export function FormularInregistrare() {
                   iconita="mail-outline"
                   placeholder="E-mail"
                   value={value}
-                  onChangeText={onChange}
+                  onChangeText={(v) => {
+                    stergeEroare();
+                    onChange(v.replace(/[<>"'`\s]/g, '').slice(0, 255));
+                  }}
                   onBlur={onBlur}
                   autoCapitalize="none"
                   keyboardType="email-address"
@@ -96,13 +108,23 @@ export function FormularInregistrare() {
                   iconita="phone-portrait-outline"
                   placeholder="Mobile"
                   value={value}
-                  onChangeText={onChange}
+                  onChangeText={(v) => {
+                    stergeEroare();
+                    onChange(v.replace(/[^0-9+]/g, '').slice(0, 16));
+                  }}
                   onBlur={onBlur}
                   keyboardType="phone-pad"
                   eroare={errors.telefon?.message}
                 />
               )}
             />
+
+            {mesajEroare !== '' && (
+              <Animated.View entering={FadeIn.duration(250)} style={stiluriEroare.container}>
+                <Ionicons name="alert-circle" size={20} color={CuloriApp.eroare} />
+                <Text style={stiluriEroare.text}>{mesajEroare}</Text>
+              </Animated.View>
+            )}
 
             <Controller
               control={control}
@@ -138,3 +160,26 @@ export function FormularInregistrare() {
     </KeyboardAvoidingView>
   );
 }
+
+const stiluriEroare = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: CuloriApp.eroareFundal,
+    borderWidth: 1,
+    borderColor: CuloriApp.eroare,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  text: {
+    flex: 1,
+    fontSize: 13,
+    color: CuloriApp.eroare,
+    fontWeight: '600',
+    lineHeight: 18,
+  },
+});

@@ -15,7 +15,9 @@ import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import SendIcon from '@mui/icons-material/Send';
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import AlertToast from '../../components/AlertToast/AlertToast';
+import TwoFactorPrompt from '../../components/TwoFactorPrompt/TwoFactorPrompt';
 
 const Reports = () => {
   const [reports, setReports] = useState<ReportData[]>([]);
@@ -27,6 +29,8 @@ const Reports = () => {
   const [filterStatus, setFilterStatus] = useState('');
   const [selectedReport, setSelectedReport] = useState<ReportData | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [pendingDownload, setPendingDownload] = useState<ReportData | null>(null);
+  const [twoFactorOpen, setTwoFactorOpen] = useState(false);
 
   const loadReports = async () => {
     setLoading(true);
@@ -57,6 +61,40 @@ const Reports = () => {
       loadReports();
     } catch {
       setToast({ message: 'Eroare la ștergere', type: 'error' });
+    }
+  };
+
+  /** Cere descarcare PDF - declanseaza 2FA */
+  const handleDownloadRequest = (report: ReportData) => {
+    setPendingDownload(report);
+    setTwoFactorOpen(true);
+  };
+
+  /** Dupa ce 2FA e confirmat, descarca PDF-ul real */
+  const handleTwoFactorApproved = async () => {
+    if (!pendingDownload) return;
+    setTwoFactorOpen(false);
+    try {
+      const apiBase = (import.meta.env.VITE_API_URL as string) || 'http://localhost:3777/api/v1/ac';
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(`${apiBase}/reports/${pendingDownload.id}/pdf`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!response.ok) throw new Error('Download failed');
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `raport_${pendingDownload.title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setToast({ message: 'Raport descarcat cu succes', type: 'success' });
+    } catch {
+      setToast({ message: 'Eroare la descarcarea raportului', type: 'error' });
+    } finally {
+      setPendingDownload(null);
     }
   };
 
@@ -205,6 +243,13 @@ const Reports = () => {
                     <VisibilityIcon fontSize="small" />
                   </button>
                   <button
+                    onClick={() => handleDownloadRequest(report)}
+                    className="p-1.5 rounded-lg hover:bg-purple-50 text-[var(--color-neutral-400)] hover:text-[#4f46e5] transition-colors cursor-pointer"
+                    title="Descarcă PDF"
+                  >
+                    <PictureAsPdfIcon fontSize="small" />
+                  </button>
+                  <button
                     onClick={() => handleDelete(report.id)}
                     className="p-1.5 rounded-lg hover:bg-red-50 text-[var(--color-neutral-400)] hover:text-red-500 transition-colors cursor-pointer"
                     title="Șterge"
@@ -260,9 +305,30 @@ const Reports = () => {
                   {selectedReport.content}
                 </div>
               )}
+
+              <div className="mt-5 flex justify-end">
+                <button
+                  onClick={() => handleDownloadRequest(selectedReport)}
+                  className="btn-gradient px-6 py-2.5 rounded-full text-sm font-bold flex items-center gap-2"
+                >
+                  <PictureAsPdfIcon style={{ fontSize: 18 }} />
+                  Descarca PDF
+                </button>
+              </div>
             </div>
           </div>
         )}
+
+        <TwoFactorPrompt
+          open={twoFactorOpen}
+          actionType="download_report_pdf"
+          actionDescription={pendingDownload ? `Descarcare raport: ${pendingDownload.title}` : undefined}
+          onClose={() => {
+            setTwoFactorOpen(false);
+            setPendingDownload(null);
+          }}
+          onApproved={handleTwoFactorApproved}
+        />
       </main>
 
       {toast && (

@@ -1,4 +1,5 @@
 import { StyleSheet, Platform } from 'react-native';
+import { CuloriApp } from '@/constants/culori';
 
 export const styles = StyleSheet.create({
   wrapper: {
@@ -42,11 +43,16 @@ export const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   cercCreare: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#1A1A1A',
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: CuloriApp.primar,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: CuloriApp.primar,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
   },
 });

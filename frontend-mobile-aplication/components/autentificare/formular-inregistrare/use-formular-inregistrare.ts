@@ -6,11 +6,13 @@ import { zodResolver } from '@hookform/resolvers/zod';
 
 import { schemaInregistrare, TipSchemaInregistrare } from '@/lib/validari/autentificare';
 import { useAutentificare } from '@/hooks/use-autentificare';
+import { sanitizeazaInput, sanitizeazaEmail } from '@/lib/securitate/sanitizare';
 
 export function useFormularInregistrare() {
   const router = useRouter();
   const { inregistrare } = useAutentificare();
   const [seIncarca, setSeIncarca] = useState(false);
+  const [mesajEroare, setMesajEroare] = useState('');
 
   const {
     control,
@@ -29,15 +31,24 @@ export function useFormularInregistrare() {
   });
 
   const laTrimitere = async (date: TipSchemaInregistrare) => {
+    setMesajEroare('');
     setSeIncarca(true);
     try {
-      const { captchaValidat, ...dateInregistrare } = date;
-      const mesaj = await inregistrare(dateInregistrare);
+      const { captchaValidat: _, ...dateInregistrare } = date;
+      // Sanitizare anti-XSS pe campurile vizibile (NU pe parola)
+      const dateSanitizate = {
+        numeUtilizator: sanitizeazaInput(dateInregistrare.numeUtilizator),
+        email: sanitizeazaEmail(dateInregistrare.email),
+        telefon: dateInregistrare.telefon.replace(/[^0-9+]/g, ''),
+        parola: dateInregistrare.parola,
+      };
+      const mesaj = await inregistrare(dateSanitizate);
       Alert.alert('Succes', mesaj, [
         { text: 'OK', onPress: () => router.replace('/(autentificare)/logare') },
       ]);
-    } catch {
-      Alert.alert('Eroare', 'Inregistrarea a esuat. Incercati din nou.');
+    } catch (err) {
+      const mesaj = err instanceof Error ? err.message : 'Inregistrarea a esuat. Incercati din nou.';
+      setMesajEroare(mesaj);
     } finally {
       setSeIncarca(false);
     }
@@ -51,6 +62,8 @@ export function useFormularInregistrare() {
     control,
     errors,
     seIncarca,
+    mesajEroare,
+    stergeEroare: () => setMesajEroare(''),
     trimite: handleSubmit(laTrimitere),
     seteazaCaptcha,
   };

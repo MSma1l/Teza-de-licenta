@@ -14,7 +14,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import type { ReactNode } from 'react';
 import { loginUser, registerUser, getCurrentUser } from '../api/authApi';
 import type { UserData, LoginData, RegisterData } from '../api/authApi';
-import { clearTokens } from '../api/apiClient';
+import { clearTokens, saveTokens } from '../api/apiClient';
 
 interface AuthContextValue {
   user: UserData | null;
@@ -23,6 +23,8 @@ interface AuthContextValue {
   login: (data: LoginData) => Promise<void>;
   register: (data: RegisterData) => Promise<string>;
   logout: () => void;
+  /** Folosit pentru login prin QR - primeste tokens deja generate de server. */
+  setSession: (accessToken: string, refreshToken: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue>({
@@ -32,6 +34,7 @@ const AuthContext = createContext<AuthContextValue>({
   login: async () => {},
   register: async () => '',
   logout: () => {},
+  setSession: async () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -43,16 +46,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   async function checkSavedToken() {
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      try {
-        const userData = await getCurrentUser();
-        setUser(userData);
-      } catch {
-        clearTokens();
-      }
+    const accessToken = localStorage.getItem('access_token');
+    const refreshToken = localStorage.getItem('refresh_token');
+
+    // Niciun token stocat - nu suntem logati
+    if (!accessToken && !refreshToken) {
+      setLoading(false);
+      return;
     }
-    setLoading(false);
+
+    try {
+      // apiRequest va incerca automat refresh la 401 daca refresh_token exista
+      const userData = await getCurrentUser();
+      setUser(userData);
+    } catch {
+      // Daca si refresh-ul a esuat, sesiunea e moarta
+      clearTokens();
+    } finally {
+      setLoading(false);
+    }
   }
 
   const login = useCallback(async (data: LoginData) => {
@@ -70,6 +82,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  /** Folosit pentru login QR - tokens vin direct de la server prin polling. */
+  const setSession = useCallback(async (accessToken: string, refreshToken: string) => {
+    saveTokens(accessToken, refreshToken);
+    try {
+      const userData = await getCurrentUser();
+      setUser(userData);
+    } catch {
+      clearTokens();
+      throw new Error('Sesiune invalida');
+    }
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -79,6 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         register,
         logout,
+        setSession,
       }}
     >
       {children}
