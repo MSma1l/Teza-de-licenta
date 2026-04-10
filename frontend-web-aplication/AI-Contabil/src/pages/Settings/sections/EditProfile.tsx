@@ -145,7 +145,27 @@ const EditProfile = () => {
 
   return (
     <div className="p-8 px-12 max-md:px-6 animate-fade-in">
-      <h1 className="font-heading text-2xl font-bold text-neutral-black mb-12">{tr.title}</h1>
+      <h1 className="font-heading text-2xl font-bold text-neutral-black mb-8">{tr.title}</h1>
+
+      {/* Language switcher */}
+      <div className="flex items-center gap-3 mb-10 p-4 bg-neutral-50 rounded-xl border border-neutral-200">
+        <LanguageIcon className="text-neutral-400" style={{ fontSize: 20 }} />
+        <span className="text-sm font-semibold text-neutral-600 mr-2">{lang === 'ro' ? 'Limba' : lang === 'en' ? 'Language' : 'Язык'}:</span>
+        {langOptions.map((opt) => (
+          <button
+            key={opt.key}
+            onClick={() => setLang(opt.key)}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 cursor-pointer ${
+              lang === opt.key
+                ? 'bg-[#4f46e5] text-white shadow-sm'
+                : 'bg-white text-neutral-600 border border-neutral-200 hover:border-[#4f46e5] hover:text-[#4f46e5]'
+            }`}
+          >
+            <span>{opt.flag}</span>
+            <span>{opt.full}</span>
+          </button>
+        ))}
+      </div>
 
       <div className="flex gap-16 max-md:flex-col max-md:items-center">
         <div className="flex-1 max-w-[500px] flex flex-col gap-6">

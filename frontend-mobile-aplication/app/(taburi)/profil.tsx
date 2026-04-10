@@ -1,6 +1,7 @@
 /**
  * Tab Profil - cont, setari rapide, link-uri spre web, delogare
  */
+import { useState } from 'react';
 import { StyleSheet, View, Text, Pressable, ScrollView, Platform, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,10 +9,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { CuloriApp } from '@/constants/culori';
 import { useAutentificare } from '@/hooks/use-autentificare';
 import { OpenOnWeb } from '@/components/open-on-web';
+import { EcranDatePersonale } from '@/components/profil/ecran-date-personale';
+import { EcranSchimbaParola } from '@/components/profil/ecran-schimba-parola';
+import { EcranSecuritate2FA } from '@/components/profil/ecran-securitate-2fa';
+
+type EcranActiv = 'profil' | 'date' | 'parola' | '2fa';
 
 export default function EcranProfil() {
   const insets = useSafeAreaInsets();
   const { utilizator, delogare } = useAutentificare();
+  const [ecranActiv, setEcranActiv] = useState<EcranActiv>('profil');
 
   const numeUtilizator = utilizator?.numeUtilizator || 'Utilizator';
   const email = utilizator?.email || '';
@@ -19,6 +26,11 @@ export default function EcranProfil() {
   const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL || 'http://localhost:5173';
 
   const deschideWeb = (cale: string) => Linking.openURL(WEB_URL + cale);
+  const laInchidere = () => setEcranActiv('profil');
+
+  if (ecranActiv === 'date') return <EcranDatePersonale laInchidere={laInchidere} />;
+  if (ecranActiv === 'parola') return <EcranSchimbaParola laInchidere={laInchidere} />;
+  if (ecranActiv === '2fa') return <EcranSecuritate2FA laInchidere={laInchidere} />;
 
   return (
     <View style={[stiluri.container, { paddingTop: insets.top }]}>
@@ -40,7 +52,7 @@ export default function EcranProfil() {
         <View style={stiluri.sectiune}>
           <Text style={stiluri.titluSectiune}>Contul meu</Text>
 
-          <Pressable style={({ pressed }) => [stiluri.cardItem, pressed && { opacity: 0.7 }]} onPress={() => deschideWeb('/settings')}>
+          <Pressable style={({ pressed }) => [stiluri.cardItem, pressed && { opacity: 0.7 }]} onPress={() => setEcranActiv('date')}>
             <View style={[stiluri.cardItemIcon, { backgroundColor: '#eef2ff' }]}>
               <Ionicons name="person-outline" size={20} color={CuloriApp.primar} />
             </View>
@@ -51,7 +63,7 @@ export default function EcranProfil() {
             <Ionicons name="chevron-forward" size={18} color={CuloriApp.textEstompat} />
           </Pressable>
 
-          <Pressable style={({ pressed }) => [stiluri.cardItem, pressed && { opacity: 0.7 }]} onPress={() => deschideWeb('/settings')}>
+          <Pressable style={({ pressed }) => [stiluri.cardItem, pressed && { opacity: 0.7 }]} onPress={() => setEcranActiv('parola')}>
             <View style={[stiluri.cardItemIcon, { backgroundColor: '#e0f2fe' }]}>
               <Ionicons name="key-outline" size={20} color={CuloriApp.secundar} />
             </View>
@@ -62,7 +74,7 @@ export default function EcranProfil() {
             <Ionicons name="chevron-forward" size={18} color={CuloriApp.textEstompat} />
           </Pressable>
 
-          <Pressable style={({ pressed }) => [stiluri.cardItem, pressed && { opacity: 0.7 }]} onPress={() => deschideWeb('/settings')}>
+          <Pressable style={({ pressed }) => [stiluri.cardItem, pressed && { opacity: 0.7 }]} onPress={() => setEcranActiv('2fa')}>
             <View style={[stiluri.cardItemIcon, { backgroundColor: '#f3e8ff' }]}>
               <Ionicons name="shield-checkmark-outline" size={20} color={CuloriApp.accent} />
             </View>
