@@ -3,9 +3,8 @@ import { z } from 'zod';
 export const schemaLogare = z.object({
   numeUtilizator: z
     .string()
-    .min(1, 'Username-ul este obligatoriu')
-    .min(3, 'Username-ul trebuie sa aiba minim 3 caractere')
-    .max(100, 'Username-ul nu poate depasi 100 caractere'),
+    .min(1, 'Username-ul sau email-ul este obligatoriu')
+    .max(255, 'Campul nu poate depasi 255 caractere'),
   parola: z
     .string()
     .min(1, 'Parola este obligatorie')

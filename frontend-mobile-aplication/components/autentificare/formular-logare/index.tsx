@@ -47,15 +47,15 @@ export function FormularLogare() {
               render={({ field: { onChange, onBlur, value } }) => (
                 <CampFormular
                   iconita="person-outline"
-                  placeholder="Username"
+                  placeholder="Username sau Email"
                   value={value}
                   onChangeText={(v) => {
                     stergeEroare();
-                    // Limita lungime + filtru caractere periculoase din input direct
-                    onChange(v.replace(/[<>"'`]/g, '').slice(0, 100));
+                    onChange(v.replace(/[<>"'`]/g, '').slice(0, 255));
                   }}
                   onBlur={onBlur}
                   autoCapitalize="none"
+                  keyboardType="email-address"
                   eroare={errors.numeUtilizator?.message}
                 />
               )}

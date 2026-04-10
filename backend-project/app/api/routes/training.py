@@ -24,7 +24,7 @@ router = APIRouter(prefix="/training", tags=["Training"])
 @router.get("/stats")
 def get_training_stats(
     db: Session = Depends(get_db),
-    user: User = Depends(require_role("admin", "contabil")),
+    user: User = Depends(require_role("super_admin", "admin")),
 ):
     """Statistici antrenare: câte corecții, câte exemple, acuratețe."""
     total = db.query(func.count(TrainingExample.id)).scalar() or 0
@@ -84,7 +84,7 @@ def get_training_documents(
     limit: int = 20,
     offset: int = 0,
     db: Session = Depends(get_db),
-    user: User = Depends(require_role("admin", "contabil")),
+    user: User = Depends(require_role("super_admin", "admin")),
 ):
     """Listează documentele disponibile pentru antrenare/revizie."""
     query = db.query(Document).filter(
@@ -123,7 +123,7 @@ def get_training_documents(
 def get_document_ocr_data(
     document_id: str,
     db: Session = Depends(get_db),
-    user: User = Depends(require_role("admin", "contabil")),
+    user: User = Depends(require_role("super_admin", "admin")),
 ):
     """
     Returnează datele OCR complete pentru vizualizare:
@@ -189,7 +189,7 @@ def submit_correction(
     document_id: str,
     correction: dict,
     db: Session = Depends(get_db),
-    user: User = Depends(require_role("admin", "contabil")),
+    user: User = Depends(require_role("super_admin", "admin")),
 ):
     """
     Trimite corecții pentru un document.
@@ -265,7 +265,7 @@ def submit_correction(
 def confirm_document(
     document_id: str,
     db: Session = Depends(get_db),
-    user: User = Depends(require_role("admin", "contabil")),
+    user: User = Depends(require_role("super_admin", "admin")),
 ):
     """Confirmă că OCR + clasificare + extracție sunt corecte (positive training example)."""
     doc = db.query(Document).filter(Document.id == document_id).first()

@@ -21,7 +21,10 @@ DOCUMENT_CLASSES = [
     "tax_declaration",  # 3 - Declarație fiscală
     "payroll",          # 4 - Stat de plată
     "bank_statement",   # 5 - Extras bancar
-    "other",            # 6 - Altele
+    "id_card",          # 6 - Buletin / Carte de identitate
+    "passport",         # 7 - Pașaport
+    "bank_extract",     # 8 - Extras de cont bancar (identitate)
+    "other",            # 9 - Altele
 ]
 
 # Keyword-based fallback (RO + EN)
@@ -49,6 +52,21 @@ KEYWORD_RULES = {
     "bank_statement": [
         "extras de cont", "sold", "debit", "credit", "tranzactii",
         "bank statement", "iban", "cont curent",
+    ],
+    "id_card": [
+        "buletin", "carte de identitate", "idnp", "identity card",
+        "domiciliu", "cetatenie", "cnp", "valabilitate",
+        "republica moldova", "seria", "data nasterii",
+    ],
+    "passport": [
+        "pasaport", "passport", "travel document", "nationality",
+        "date of birth", "place of birth", "date of issue",
+        "date of expiry", "autoritatea emitenta",
+    ],
+    "bank_extract": [
+        "extras de cont", "account statement", "sold initial",
+        "sold final", "rulaj", "numar cont", "titular cont",
+        "banca comerciala", "sucursala",
     ],
 }
 

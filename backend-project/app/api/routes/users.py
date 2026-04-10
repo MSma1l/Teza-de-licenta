@@ -81,6 +81,57 @@ async def upload_avatar(
     return current_user
 
 
+# --- Contabili disponibili (orice user logat) ---
+
+@router.get("/accountants", response_model=UserListResponse)
+def list_accountants(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Lista contabililor activi — disponibili pentru asignare de catre clienti."""
+    accountants = db.query(User).filter(
+        User.role == UserRole.CONTABIL,
+        User.is_active == True,
+    ).order_by(User.full_name, User.username).all()
+    return UserListResponse(users=accountants, total=len(accountants))
+
+
+@router.post("/choose-accountant")
+def choose_accountant(
+    accountant_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Clientul alege un contabil. Creeaza legatura accountant-client."""
+    if current_user.role != UserRole.CLIENT:
+        raise HTTPException(status_code=403, detail="Doar clientii pot alege un contabil")
+
+    accountant = db.query(User).filter(
+        User.id == accountant_id,
+        User.role == UserRole.CONTABIL,
+        User.is_active == True,
+    ).first()
+    if not accountant:
+        raise HTTPException(status_code=404, detail="Contabilul nu a fost gasit")
+
+    # Verifica daca exista deja legatura
+    existing = db.query(AccountantClient).filter(
+        AccountantClient.accountant_id == accountant_id,
+        AccountantClient.client_id == current_user.id,
+        AccountantClient.is_active == True,
+    ).first()
+    if existing:
+        raise HTTPException(status_code=409, detail="Esti deja asignat la acest contabil")
+
+    link = AccountantClient(
+        accountant_id=accountant_id,
+        client_id=current_user.id,
+    )
+    db.add(link)
+    db.commit()
+    return {"success": True, "message": "Contabil asignat cu succes", "accountant_id": accountant_id}
+
+
 # --- Admin & Contabil routes ---
 
 @router.get("/", response_model=UserListResponse)
@@ -88,7 +139,7 @@ def list_users(
     role: str | None = None,
     skip: int = 0,
     limit: int = 50,
-    current_user: User = Depends(require_role(UserRole.ADMIN, UserRole.CONTABIL)),
+    current_user: User = Depends(require_role(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.CONTABIL)),
     db: Session = Depends(get_db),
 ):
     query = db.query(User)

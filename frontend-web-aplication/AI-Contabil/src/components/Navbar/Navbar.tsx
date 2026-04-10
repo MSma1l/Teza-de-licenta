@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone';
@@ -9,7 +9,6 @@ import AssessmentIcon from '@mui/icons-material/Assessment';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import CloseIcon from '@mui/icons-material/Close';
-import LanguageIcon from '@mui/icons-material/Language';
 
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -70,26 +69,13 @@ interface NavbarProps {
 
 const Navbar = ({ isLoggedIn = false, showNavLinks = true }: NavbarProps) => {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
+  const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const { lang, setLang } = useLanguage();
   const tr = t[lang];
 
-  const [langOpen, setLangOpen] = useState(false);
-  const langRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (langRef.current && !langRef.current.contains(e.target as Node)) {
-        setLangOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
-
-  const currentLang = langOptions.find((l) => l.key === lang) || langOptions[0];
 
   const navLinkClass = "nav-link-hover text-base font-bold uppercase tracking-wide text-neutral-600 cursor-pointer relative py-1";
 
@@ -122,44 +108,6 @@ const Navbar = ({ isLoggedIn = false, showNavLinks = true }: NavbarProps) => {
 
         {/* Desktop right section */}
         <div className="flex items-center gap-3 max-md:hidden">
-          {/* Language switcher */}
-          <div ref={langRef} className="relative">
-            <button
-              onClick={() => setLangOpen(!langOpen)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-neutral-200 bg-white text-sm font-medium text-neutral-600 cursor-pointer transition-all duration-200 hover:border-[#4f46e5] hover:text-[#4f46e5] hover:shadow-sm"
-            >
-              <LanguageIcon style={{ fontSize: 16 }} />
-              <span>{currentLang.flag}</span>
-              <span className="text-xs font-semibold">{currentLang.label}</span>
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className={`transition-transform duration-200 ${langOpen ? 'rotate-180' : ''}`}>
-                <path d="M2 4L5 7L8 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </button>
-
-            {langOpen && (
-              <div className="absolute top-full right-0 mt-2 bg-white rounded-xl border border-neutral-200 shadow-lg overflow-hidden animate-fade-in min-w-[140px] z-50">
-                {langOptions.map((opt) => (
-                  <button
-                    key={opt.key}
-                    onClick={() => { setLang(opt.key); setLangOpen(false); }}
-                    className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium cursor-pointer transition-all duration-150 ${
-                      lang === opt.key
-                        ? 'bg-gradient-to-r from-[#4f46e5]/10 to-[#0ea5e9]/10 text-[#4f46e5]'
-                        : 'text-neutral-600 hover:bg-neutral-50'
-                    }`}
-                  >
-                    <span className="text-base">{opt.flag}</span>
-                    <span>{opt.key === 'ro' ? 'Romana' : opt.key === 'en' ? 'English' : 'Русский'}</span>
-                    {lang === opt.key && (
-                      <svg className="ml-auto" width="14" height="14" viewBox="0 0 14 14" fill="none">
-                        <path d="M3 7L6 10L11 4" stroke="#4f46e5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
 
           {isLoggedIn ? (
             <>
@@ -177,13 +125,15 @@ const Navbar = ({ isLoggedIn = false, showNavLinks = true }: NavbarProps) => {
               >
                 <AssessmentIcon />
               </div>
-              <div
-                className="nav-icon-hover w-10 h-10 flex items-center justify-center cursor-pointer text-neutral-600 rounded-lg"
-                onClick={() => navigate('/training')}
-                title={tr.training}
-              >
-                <SchoolIcon />
-              </div>
+              {isAdmin && (
+                <div
+                  className="nav-icon-hover w-10 h-10 flex items-center justify-center cursor-pointer text-neutral-600 rounded-lg"
+                  onClick={() => navigate('/training')}
+                  title={tr.training}
+                >
+                  <SchoolIcon />
+                </div>
+              )}
               <div
                 className="nav-icon-hover w-10 h-10 flex items-center justify-center cursor-pointer text-neutral-600 rounded-lg"
                 onClick={() => navigate('/settings')}

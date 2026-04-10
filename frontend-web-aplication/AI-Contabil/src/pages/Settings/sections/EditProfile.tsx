@@ -192,7 +192,11 @@ const EditProfile = () => {
         </div>
 
         <div className="flex flex-col items-center gap-3">
-          <div className="w-30 h-30 rounded-full border-3 border-neutral-black flex items-center justify-center overflow-hidden bg-neutral-100 [&_img]:w-full [&_img]:h-full [&_img]:object-cover">
+          <div
+            className="w-30 h-30 rounded-full border-3 border-neutral-black flex items-center justify-center overflow-hidden bg-neutral-100 cursor-pointer transition-all duration-200 hover:opacity-80 hover:shadow-lg [&_img]:w-full [&_img]:h-full [&_img]:object-cover"
+            onClick={handleAvatarChange}
+            title={tr.editPhoto}
+          >
             {profile.avatarUrl ? (
               <img src={profile.avatarUrl} alt="Avatar" />
             ) : (
@@ -206,12 +210,6 @@ const EditProfile = () => {
             accept="image/jpeg,image/png,image/webp"
             onChange={handleAvatarFileSelected}
           />
-          <span
-            className="text-sm text-[#1a73e8] cursor-pointer transition-opacity duration-200 hover:opacity-70"
-            onClick={handleAvatarChange}
-          >
-            {tr.editPhoto}
-          </span>
         </div>
       </div>
 

@@ -39,6 +39,6 @@ class QRLoginSession(Base):
     )
     expires_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc) + timedelta(minutes=3),
+        default=lambda: datetime.now(timezone.utc) + timedelta(minutes=5),
     )
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

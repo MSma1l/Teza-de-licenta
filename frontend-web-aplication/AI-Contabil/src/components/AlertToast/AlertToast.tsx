@@ -50,8 +50,8 @@ const AlertToast = ({ type, title, message, onClose, duration = 5000 }: AlertToa
   };
 
   return (
-    <div className={`flex items-start gap-4 py-4 px-6 rounded-lg relative overflow-hidden max-w-[500px] w-full shadow-md ${config.bg} ${isVisible ? 'animate-toast-in' : 'animate-toast-out'}`}>
-      <div className={`absolute left-0 top-0 bottom-0 w-1 ${config.bar}`} />
+    <div className={`fixed bottom-6 right-6 z-[9999] flex items-start gap-4 py-4 px-6 rounded-xl relative overflow-hidden max-w-[420px] w-full shadow-2xl border border-black/5 ${config.bg} ${isVisible ? 'animate-toast-in' : 'animate-toast-out'}`}>
+      <div className={`absolute left-0 top-0 bottom-0 w-1.5 rounded-l-xl ${config.bar}`} />
 
       <div className={`w-10 h-10 min-w-[40px] rounded-full flex items-center justify-center shrink-0 ${config.icon} [&_svg]:text-white [&_svg]:text-[1.3rem]`}>
         {iconMap[type]}
