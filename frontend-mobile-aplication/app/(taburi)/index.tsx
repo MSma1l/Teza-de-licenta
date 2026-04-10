@@ -8,7 +8,7 @@
  * - Stari: loading, gol (fara conversatii), cu date
  */
 import { useEffect, useState, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -17,6 +17,7 @@ import { CuloriApp } from '@/constants/culori';
 import { useAutentificare } from '@/hooks/use-autentificare';
 import { obtineConversatii, type ConversatieChat } from '@/lib/api/serviciu-chat';
 import { OpenOnWeb } from '@/components/open-on-web';
+import { AlegeContabil } from '@/components/alege-contabil';
 import { stiluri } from './styles-acasa';
 
 function formateazaData(dataIso: string): string {
@@ -49,6 +50,7 @@ export default function EcranAcasa() {
   const [conversatii, setConversatii] = useState<ConversatieChat[]>([]);
   const [seIncarca, setSeIncarca] = useState(true);
   const [reincarcare, setReincarcare] = useState(false);
+  const [modalContabil, setModalContabil] = useState(false);
 
   const incarcaConversatii = useCallback(async () => {
     try {
@@ -156,6 +158,24 @@ export default function EcranAcasa() {
           </TouchableOpacity>
         </View>
 
+        {/* Card alege contabil */}
+        <TouchableOpacity
+          style={stiluri.cardContabil}
+          activeOpacity={0.85}
+          onPress={() => setModalContabil(true)}
+        >
+          <View style={stiluri.cardContabilIcon}>
+            <Ionicons name="people" size={24} color="#FFFFFF" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={stiluri.cardContabilTitlu}>Alege un contabil</Text>
+            <Text style={stiluri.cardContabilSubtitlu}>
+              Conecteaza-te cu un contabil disponibil
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={22} color={CuloriApp.primar} />
+        </TouchableOpacity>
+
         {/* Sectiune conversatii */}
         <View style={stiluri.sectiuneConversatii}>
           <View style={stiluri.antetSectiune}>
@@ -245,6 +265,19 @@ export default function EcranAcasa() {
           )}
         </View>
       </ScrollView>
+
+      {/* Modal alegere contabil */}
+      <Modal
+        visible={modalContabil}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setModalContabil(false)}
+      >
+        <AlegeContabil
+          laInchidere={() => setModalContabil(false)}
+          laAlegere={() => setModalContabil(false)}
+        />
+      </Modal>
     </View>
   );
 }

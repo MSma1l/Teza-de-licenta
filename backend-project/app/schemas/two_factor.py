@@ -11,7 +11,7 @@ class TwoFactorRequest(BaseModel):
 class TwoFactorChallengeResponse(BaseModel):
     """Raspunsul cu codul + token QR ce trebuie afisat pe Web."""
     challenge_id: str
-    code: int  # 10-99
+    code: int  # 100000-999999 (6 cifre)
     qr_token: str
     expires_at: datetime
     action_type: str
@@ -21,7 +21,7 @@ class TwoFactorChallengeResponse(BaseModel):
 class TwoFactorVerify(BaseModel):
     """Mobile trimite codul introdus de user."""
     challenge_id: str = Field(max_length=36)
-    code: int = Field(ge=10, le=99)
+    code: int = Field(ge=100000, le=999999)
 
 
 class TwoFactorPendingChallenge(BaseModel):

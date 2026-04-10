@@ -6,6 +6,13 @@ import { fetchUserProfile, updateUserProfile, uploadAvatar } from '../../../api/
 import AlertToast from '../../../components/AlertToast/AlertToast';
 import { useLanguage } from '../../../context/LanguageContext';
 import type { Lang } from '../../../context/LanguageContext';
+import LanguageIcon from '@mui/icons-material/Language';
+
+const langOptions: { key: Lang; flag: string; label: string; full: string }[] = [
+  { key: 'ro', flag: '\u{1F1F2}\u{1F1E9}', label: 'RO', full: 'Romana' },
+  { key: 'en', flag: '\u{1F1EC}\u{1F1E7}', label: 'EN', full: 'English' },
+  { key: 'ru', flag: '\u{1F1F7}\u{1F1FA}', label: 'RU', full: 'Русский' },
+];
 
 const t: Record<Lang, {
   title: string;
@@ -78,7 +85,7 @@ const t: Record<Lang, {
 };
 
 const EditProfile = () => {
-  const { lang } = useLanguage();
+  const { lang, setLang } = useLanguage();
   const tr = t[lang];
 
   const [profile, setProfile] = useState<UserProfile>({

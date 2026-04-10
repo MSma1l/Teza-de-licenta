@@ -27,9 +27,13 @@ from app.core.security import (
 )
 from app.models.user import User, UserRole
 from app.models.login_attempt import LoginAttempt
+from app.models.two_factor import TwoFactorChallenge
 from app.schemas.auth import RegisterRequest, LoginRequest, TokenResponse, RefreshRequest
 from app.schemas.user import UserResponse
 from app.api.deps import get_current_user
+
+import random
+import secrets
 
 router = APIRouter(prefix="/auth", tags=["Autentificare"])
 
@@ -133,7 +137,10 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)):
     return user
 
 
-@router.post("/login", response_model=TokenResponse)
+ROLES_REQUIRING_2FA = {UserRole.CONTABIL, UserRole.ADMIN, UserRole.SUPER_ADMIN}
+
+
+@router.post("/login")
 def login(data: LoginRequest, request: Request, db: Session = Depends(get_db)):
     """
     Autentificare cu mesaje clare si protectie anti-brute force.
@@ -191,6 +198,62 @@ def login(data: LoginRequest, request: Request, db: Session = Depends(get_db)):
 
     # Succes - reset incercari
     _reset_attempts(db, username, ip)
+
+    # Contabil/Admin/Super_Admin necesita 2FA obligatoriu
+    if user.role in ROLES_REQUIRING_2FA:
+        code = random.randint(100000, 999999)
+        qr_token = secrets.token_urlsafe(32)
+        challenge = TwoFactorChallenge(
+            user_id=user.id,
+            code=code,
+            qr_token=qr_token,
+            action_type="login_2fa",
+            action_description=f"Confirmare logare ca {user.role.value}",
+        )
+        db.add(challenge)
+        db.commit()
+        db.refresh(challenge)
+        return {
+            "requires_2fa": True,
+            "challenge_id": challenge.id,
+            "code": challenge.code,
+            "qr_token": challenge.qr_token,
+            "expires_at": str(challenge.expires_at),
+            "message": f"Confirma logarea din aplicatia mobila. Codul: {code}",
+        }
+
+    # Client — logare directa fara 2FA
+    token_data = {"sub": user.id, "role": user.role}
+    return TokenResponse(
+        access_token=create_access_token(token_data),
+        refresh_token=create_refresh_token(token_data),
+    )
+
+
+@router.post("/login/complete-2fa", response_model=TokenResponse)
+def complete_login_2fa(challenge_id: str, db: Session = Depends(get_db)):
+    """
+    Finalizeaza logarea dupa ce 2FA a fost confirmat din mobile.
+    Web apeleaza acest endpoint dupa ce polling-ul pe /2fa/status returneaza verified=true.
+    """
+    challenge = db.query(TwoFactorChallenge).filter(
+        TwoFactorChallenge.id == challenge_id,
+        TwoFactorChallenge.action_type == "login_2fa",
+    ).first()
+
+    if not challenge:
+        raise HTTPException(status_code=404, detail="Provocare 2FA negasita")
+
+    if not challenge.is_verified:
+        raise HTTPException(status_code=403, detail="Provocarea 2FA nu a fost inca confirmata")
+
+    now = datetime.now(timezone.utc)
+    if _aware(challenge.expires_at) and _aware(challenge.expires_at) < now:
+        raise HTTPException(status_code=410, detail="Provocarea a expirat")
+
+    user = db.query(User).filter(User.id == challenge.user_id).first()
+    if not user or not user.is_active:
+        raise HTTPException(status_code=401, detail="Utilizator invalid")
 
     token_data = {"sub": user.id, "role": user.role}
     return TokenResponse(

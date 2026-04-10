@@ -273,4 +273,43 @@ export const stiluri = StyleSheet.create({
     color: CuloriApp.avertizare,
     fontWeight: '700',
   },
+  cardContabil: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 14,
+    backgroundColor: CuloriApp.fundalCard,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: CuloriApp.bordura,
+    ...Platform.select({
+      ios: {
+        shadowColor: CuloriApp.primar,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+      },
+      android: { elevation: 2 },
+    }),
+  },
+  cardContabilIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: CuloriApp.primar,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  cardContabilTitlu: {
+    fontSize: 15,
+    fontWeight: '700' as const,
+    color: CuloriApp.textPrimar,
+  },
+  cardContabilSubtitlu: {
+    fontSize: 12,
+    color: CuloriApp.textSecundar,
+    marginTop: 2,
+  },
 });

@@ -1,7 +1,7 @@
 /**
  * Tab Profil - cont, setari rapide, link-uri spre web, delogare
  */
-import { StyleSheet, View, Text, Pressable, ScrollView, Platform } from 'react-native';
+import { StyleSheet, View, Text, Pressable, ScrollView, Platform, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -16,6 +16,9 @@ export default function EcranProfil() {
   const numeUtilizator = utilizator?.numeUtilizator || 'Utilizator';
   const email = utilizator?.email || '';
   const initiala = numeUtilizator.charAt(0).toUpperCase();
+  const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL || 'http://localhost:5173';
+
+  const deschideWeb = (cale: string) => Linking.openURL(WEB_URL + cale);
 
   return (
     <View style={[stiluri.container, { paddingTop: insets.top }]}>
@@ -37,7 +40,7 @@ export default function EcranProfil() {
         <View style={stiluri.sectiune}>
           <Text style={stiluri.titluSectiune}>Contul meu</Text>
 
-          <View style={stiluri.cardItem}>
+          <Pressable style={({ pressed }) => [stiluri.cardItem, pressed && { opacity: 0.7 }]} onPress={() => deschideWeb('/settings')}>
             <View style={[stiluri.cardItemIcon, { backgroundColor: '#eef2ff' }]}>
               <Ionicons name="person-outline" size={20} color={CuloriApp.primar} />
             </View>
@@ -46,9 +49,9 @@ export default function EcranProfil() {
               <Text style={stiluri.cardItemDescriere}>Modifica numele si telefonul</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={CuloriApp.textEstompat} />
-          </View>
+          </Pressable>
 
-          <View style={stiluri.cardItem}>
+          <Pressable style={({ pressed }) => [stiluri.cardItem, pressed && { opacity: 0.7 }]} onPress={() => deschideWeb('/settings')}>
             <View style={[stiluri.cardItemIcon, { backgroundColor: '#e0f2fe' }]}>
               <Ionicons name="key-outline" size={20} color={CuloriApp.secundar} />
             </View>
@@ -57,9 +60,9 @@ export default function EcranProfil() {
               <Text style={stiluri.cardItemDescriere}>Pentru securitate, schimba periodic</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={CuloriApp.textEstompat} />
-          </View>
+          </Pressable>
 
-          <View style={stiluri.cardItem}>
+          <Pressable style={({ pressed }) => [stiluri.cardItem, pressed && { opacity: 0.7 }]} onPress={() => deschideWeb('/settings')}>
             <View style={[stiluri.cardItemIcon, { backgroundColor: '#f3e8ff' }]}>
               <Ionicons name="shield-checkmark-outline" size={20} color={CuloriApp.accent} />
             </View>
@@ -68,7 +71,7 @@ export default function EcranProfil() {
               <Text style={stiluri.cardItemDescriere}>Confirma actiuni de pe web</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={CuloriApp.textEstompat} />
-          </View>
+          </Pressable>
         </View>
 
         {/* Link-uri rapide spre web */}

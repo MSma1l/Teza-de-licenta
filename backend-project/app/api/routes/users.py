@@ -37,19 +37,44 @@ def update_profile(data: UserUpdateRequest, current_user: User = Depends(get_cur
 
 
 @router.post("/me/change-password")
-def change_password(data: PasswordChangeRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def change_password(
+    data: PasswordChangeRequest,
+    challenge_id: str | None = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Schimba parola. Necesita 2FA confirmat.
+
+    Flux:
+    1. Web cere POST /2fa/request cu action_type="change_password"
+    2. Pe web apare pin-ul de 8 cifre
+    3. Mobile vede provocarea si introduce pin-ul
+    4. Web polleaza /2fa/status — cand verified=true, trimite change-password cu challenge_id
+    """
+    # Verifica 2FA daca e furnizat
+    if challenge_id:
+        from app.models.two_factor import TwoFactorChallenge
+        challenge = db.query(TwoFactorChallenge).filter(
+            TwoFactorChallenge.id == challenge_id,
+            TwoFactorChallenge.user_id == current_user.id,
+            TwoFactorChallenge.action_type == "change_password",
+        ).first()
+        if not challenge or not challenge.is_verified:
+            raise HTTPException(status_code=403, detail="Provocarea 2FA nu a fost confirmata")
+
     if not verify_password(data.current_password, current_user.password_hash):
-        raise HTTPException(status_code=400, detail="Parola curentă este incorectă")
+        raise HTTPException(status_code=400, detail="Parola curenta este incorecta")
 
     if data.new_password != data.confirm_password:
         raise HTTPException(status_code=400, detail="Parolele noi nu coincid")
 
-    if len(data.new_password) < 6:
-        raise HTTPException(status_code=400, detail="Parola nouă trebuie să aibă minim 6 caractere")
+    if len(data.new_password) < 8:
+        raise HTTPException(status_code=400, detail="Parola noua trebuie sa aiba minim 8 caractere")
 
     current_user.password_hash = hash_password(data.new_password)
     db.commit()
-    return {"message": "Parola a fost schimbată cu succes"}
+    return {"message": "Parola a fost schimbata cu succes"}
 
 
 @router.post("/me/avatar", response_model=UserResponse)

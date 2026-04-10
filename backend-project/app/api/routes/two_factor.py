@@ -75,7 +75,7 @@ def request_2fa(
     """Creeaza o provocare 2FA. Web primeste cod 10-99 + token QR de afisat."""
     _expire_old_challenges(db, current_user.id)
 
-    code = random.randint(10, 99)
+    code = random.randint(100000, 999999)
     qr_token = secrets.token_urlsafe(32)
     challenge = TwoFactorChallenge(
         user_id=current_user.id,
