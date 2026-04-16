@@ -34,7 +34,7 @@ function getRefreshToken(): string | null {
 export async function apiRequest<T>(
   path: string,
   options: {
-    method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
+    method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
     body?: unknown;
     headers?: Record<string, string>;
     noAuth?: boolean;

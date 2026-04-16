@@ -10,9 +10,11 @@ from loguru import logger
 
 
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://ai_contabil_ollama:11434")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:7b-instruct")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:3b-instruct")
 # generos — raspunsurile pot avea 30+ sec pe CPU
 OLLAMA_TIMEOUT = float(os.getenv("OLLAMA_TIMEOUT", "120"))
+# Tine modelul incarcat 30min intre request-uri → prima intrebare dupa idle nu reincarca de la zero
+OLLAMA_KEEP_ALIVE = os.getenv("OLLAMA_KEEP_ALIVE", "30m")
 
 
 async def model_disponibil(model: str = OLLAMA_MODEL) -> bool:
@@ -46,9 +48,12 @@ async def genereaza(
             {"role": "user", "content": user_prompt},
         ],
         "stream": False,
+        "keep_alive": OLLAMA_KEEP_ALIVE,
         "options": {
             "temperature": temperatura,
             "num_predict": max_tokens if max_tokens else -1,
+            # Context scurt — intrebarile + contextul RAG rar depasesc 2k tokeni
+            "num_ctx": 2048,
         },
     }
 

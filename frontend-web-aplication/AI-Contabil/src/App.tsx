@@ -7,15 +7,34 @@ import Settings from './pages/Settings/Settings';
 import Training from './pages/Training/Training';
 import Documents from './pages/Documents/Documents';
 import Reports from './pages/Reports/Reports';
+import Admin from './pages/Admin/Admin';
+import Contabil from './pages/Contabil/Contabil';
 import ErrorBoundary from './components/ErrorBoundary/ErrorBoundary';
 import ChatWidget from './components/ChatWidget/ChatWidget';
 
 import { useAuth } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
 
+/* Guard de rol — cere ca user-ul logat sa aiba unul din rolurile listate. */
+function RoleGuard({
+  allowed,
+  userRole,
+  children,
+}: {
+  allowed: string[];
+  userRole: string | undefined;
+  children: React.ReactNode;
+}) {
+  const r = (userRole || '').toLowerCase();
+  if (!allowed.map((a) => a.toLowerCase()).includes(r)) {
+    return <Navigate to="/home" />;
+  }
+  return <>{children}</>;
+}
+
 function App() {
   const location = useLocation();
-  const { isLoggedIn, loading } = useAuth();
+  const { isLoggedIn, loading, user } = useAuth();
 
   if (loading) {
     return (
@@ -38,6 +57,30 @@ function App() {
             <Route path="/training" element={isLoggedIn ? <Training /> : <Navigate to="/signin" />} />
             <Route path="/documents" element={isLoggedIn ? <Documents /> : <Navigate to="/signin" />} />
             <Route path="/reports" element={isLoggedIn ? <Reports /> : <Navigate to="/signin" />} />
+            <Route
+              path="/admin"
+              element={
+                isLoggedIn ? (
+                  <RoleGuard allowed={['admin', 'super_admin']} userRole={user?.role}>
+                    <Admin />
+                  </RoleGuard>
+                ) : (
+                  <Navigate to="/signin" />
+                )
+              }
+            />
+            <Route
+              path="/contabil"
+              element={
+                isLoggedIn ? (
+                  <RoleGuard allowed={['contabil', 'admin', 'super_admin']} userRole={user?.role}>
+                    <Contabil />
+                  </RoleGuard>
+                ) : (
+                  <Navigate to="/signin" />
+                )
+              }
+            />
           </Routes>
           {isLoggedIn && <ChatWidget />}
         </div>

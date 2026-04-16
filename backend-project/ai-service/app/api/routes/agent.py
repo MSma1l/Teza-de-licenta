@@ -98,7 +98,8 @@ async def ask(cerere: CerereIntrebare):
     )
 
     try:
-        raspuns_text = await genereaza(SYSTEM_PROMPT, user_prompt)
+        # Limitam raspunsul la 500 tokeni — rapid pe CPU, suficient pt contabilitate
+        raspuns_text = await genereaza(SYSTEM_PROMPT, user_prompt, max_tokens=500)
     except Exception as e:
         logger.error(f"Ollama generate failed: {e}")
         raise HTTPException(status_code=502, detail=f"Generare esuata: {e}")

@@ -199,8 +199,10 @@ def login(data: LoginRequest, request: Request, db: Session = Depends(get_db)):
     # Succes - reset incercari
     _reset_attempts(db, username, ip)
 
-    # Contabil/Admin/Super_Admin necesita 2FA obligatoriu
-    if user.role in ROLES_REQUIRING_2FA:
+    # 2FA e cerut pentru roluri sensibile DOAR daca userul are flag-ul activat
+    # in profil. Anterior era fortat pe rol — acum respectam preferinta utilizatorului,
+    # ca sa permitem testare rapida cu 2FA dezactivat din panoul de cont.
+    if user.role in ROLES_REQUIRING_2FA and user.two_factor_enabled:
         code = random.randint(100000, 999999)
         qr_token = secrets.token_urlsafe(32)
         challenge = TwoFactorChallenge(

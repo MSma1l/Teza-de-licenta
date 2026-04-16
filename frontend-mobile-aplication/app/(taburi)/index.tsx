@@ -18,6 +18,7 @@ import { useAutentificare } from '@/hooks/use-autentificare';
 import { obtineConversatii, type ConversatieChat } from '@/lib/api/serviciu-chat';
 import { OpenOnWeb } from '@/components/open-on-web';
 import { AlegeContabil } from '@/components/alege-contabil';
+import { ChatDjarvis } from '@/components/chat-djarvis';
 import { stiluri } from './styles-acasa';
 
 function formateazaData(dataIso: string): string {
@@ -51,6 +52,13 @@ export default function EcranAcasa() {
   const [seIncarca, setSeIncarca] = useState(true);
   const [reincarcare, setReincarcare] = useState(false);
   const [modalContabil, setModalContabil] = useState(false);
+  const [chatVizibil, setChatVizibil] = useState(false);
+  const [chatConversatieId, setChatConversatieId] = useState<string | null>(null);
+
+  const deschideChat = useCallback((conversationId?: string | null) => {
+    setChatConversatieId(conversationId ?? null);
+    setChatVizibil(true);
+  }, []);
 
   const incarcaConversatii = useCallback(async () => {
     try {
@@ -113,7 +121,7 @@ export default function EcranAcasa() {
         <TouchableOpacity
           style={stiluri.bannerAi}
           activeOpacity={0.9}
-          onPress={() => router.push('/(taburi)/index' as any)}
+          onPress={() => deschideChat(null)}
         >
           <View style={stiluri.bannerAiOverlay} />
           <View style={stiluri.bannerAiContinut}>
@@ -210,6 +218,7 @@ export default function EcranAcasa() {
                   key={conv.id}
                   style={stiluri.cardConversatie}
                   activeOpacity={0.85}
+                  onPress={() => deschideChat(conv.id)}
                 >
                   <View
                     style={[
@@ -278,6 +287,18 @@ export default function EcranAcasa() {
           laAlegere={() => setModalContabil(false)}
         />
       </Modal>
+
+      {/* Chat cu Djarvis — full screen */}
+      <ChatDjarvis
+        vizibil={chatVizibil}
+        conversatieId={chatConversatieId}
+        laInchide={() => {
+          setChatVizibil(false);
+          // Reincarca conversatiile sa vedem pe home-ul actualizat
+          incarcaConversatii();
+        }}
+        laSchimbareConversatie={(id) => setChatConversatieId(id)}
+      />
     </View>
   );
 }

@@ -228,3 +228,155 @@ def get_user(
     if not user:
         raise HTTPException(status_code=404, detail="Utilizator negăsit")
     return user
+
+
+# --- Admin: schimbare rol ---
+
+from pydantic import BaseModel, Field
+
+
+class RoleChangeRequest(BaseModel):
+    role: str = Field(..., pattern="^(admin|contabil|client)$")
+
+
+@router.patch("/{user_id}/role", response_model=UserResponse)
+def change_user_role(
+    user_id: str,
+    data: RoleChangeRequest,
+    current_user: User = Depends(require_role(UserRole.ADMIN)),
+    db: Session = Depends(get_db),
+):
+    """Admin schimba rolul unui utilizator (promoveaza client -> contabil, etc.)."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Utilizator negăsit")
+
+    # Normalizare enum — DB stocheaza UPPERCASE
+    role_normalizat = data.role.upper()
+    try:
+        user.role = UserRole[role_normalizat]
+    except KeyError:
+        raise HTTPException(status_code=400, detail=f"Rol invalid: {data.role}")
+
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+class CreateContabilRequest(BaseModel):
+    username: str = Field(min_length=3, max_length=50)
+    email: str = Field(min_length=5, max_length=100)
+    password: str = Field(min_length=8, max_length=128)
+    full_name: str | None = None
+    phone: str | None = None
+
+
+class AdminAssignRequest(BaseModel):
+    contabil_id: str
+    client_id: str
+
+
+@router.post("/admin/assign-client")
+def admin_assign_client(
+    data: AdminAssignRequest,
+    current_user: User = Depends(require_role(UserRole.ADMIN)),
+    db: Session = Depends(get_db),
+):
+    """Admin asigneaza un CLIENT la un CONTABIL specific."""
+    contabil = db.query(User).filter(
+        User.id == data.contabil_id,
+        User.role == UserRole.CONTABIL,
+    ).first()
+    if not contabil:
+        raise HTTPException(status_code=404, detail="Contabil negasit")
+
+    client = db.query(User).filter(
+        User.id == data.client_id,
+        User.role == UserRole.CLIENT,
+    ).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client negasit")
+
+    # reactivate daca exista deja inactive
+    existing = db.query(AccountantClient).filter(
+        AccountantClient.accountant_id == contabil.id,
+        AccountantClient.client_id == client.id,
+    ).first()
+    if existing:
+        if existing.is_active:
+            raise HTTPException(status_code=400, detail="Clientul este deja asignat acestui contabil")
+        existing.is_active = True
+        db.commit()
+        return {"message": "Client reasignat cu succes"}
+
+    link = AccountantClient(accountant_id=contabil.id, client_id=client.id)
+    db.add(link)
+    db.commit()
+    return {"message": "Client asignat contabilului cu succes"}
+
+
+@router.delete("/admin/assign-client")
+def admin_unassign_client(
+    data: AdminAssignRequest,
+    current_user: User = Depends(require_role(UserRole.ADMIN)),
+    db: Session = Depends(get_db),
+):
+    """Admin dezasigneaza un client de la un contabil (setez is_active=False)."""
+    link = db.query(AccountantClient).filter(
+        AccountantClient.accountant_id == data.contabil_id,
+        AccountantClient.client_id == data.client_id,
+        AccountantClient.is_active == True,
+    ).first()
+    if not link:
+        raise HTTPException(status_code=404, detail="Asignare negasita")
+    link.is_active = False
+    db.commit()
+    return {"message": "Client dezasignat de la contabil"}
+
+
+@router.get("/contabil/{contabil_id}/clients", response_model=UserListResponse)
+def list_clients_of_contabil(
+    contabil_id: str,
+    current_user: User = Depends(require_role(UserRole.ADMIN)),
+    db: Session = Depends(get_db),
+):
+    """Admin vede ce clienti are asignati un contabil anume."""
+    contabil = db.query(User).filter(User.id == contabil_id).first()
+    if not contabil:
+        raise HTTPException(status_code=404, detail="Utilizator negasit")
+
+    links = db.query(AccountantClient).filter(
+        AccountantClient.accountant_id == contabil.id,
+        AccountantClient.is_active == True,
+    ).all()
+    client_ids = [l.client_id for l in links]
+    clients = db.query(User).filter(User.id.in_(client_ids)).all() if client_ids else []
+    return UserListResponse(users=clients, total=len(clients))
+
+
+@router.post("/create-contabil", response_model=UserResponse, status_code=201)
+def create_contabil(
+    data: CreateContabilRequest,
+    current_user: User = Depends(require_role(UserRole.ADMIN)),
+    db: Session = Depends(get_db),
+):
+    """Admin creeaza un cont nou direct cu rol CONTABIL."""
+    if db.query(User).filter(User.email == data.email).first():
+        raise HTTPException(status_code=400, detail="Email-ul este deja folosit")
+    if db.query(User).filter(User.username == data.username).first():
+        raise HTTPException(status_code=400, detail="Username-ul este deja folosit")
+
+    user = User(
+        username=data.username,
+        email=data.email,
+        password_hash=hash_password(data.password),
+        full_name=data.full_name,
+        phone=data.phone,
+        role=UserRole.CONTABIL,
+        is_active=True,
+        is_verified=True,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user

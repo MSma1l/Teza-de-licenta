@@ -2,10 +2,11 @@
  * Pagina Training - Antrenare modele AI
  * Accesibilă doar pentru admin și contabil.
  *
- * 3 tab-uri:
+ * Tab-uri:
  * 1. Dashboard - statistici, modele active, progres
  * 2. Revizie Documente - vizualizare OCR + corecții
  * 3. Ghid Antrenare - tutorial vizual pas cu pas
+ * 4. Contabili (DOAR admin) - creare cont contabil + gestionare roluri
  */
 import { useState } from 'react';
 import Navbar from '../../components/Navbar/Navbar';
@@ -13,16 +14,28 @@ import Footer from '../../components/Footer/Footer';
 import TrainingDashboard from './components/TrainingDashboard';
 import DocumentReview from './components/DocumentReview';
 import TrainingGuide from './components/TrainingGuide';
+import ContabilManagement from './components/ContabilManagement';
+import { useAuth } from '../../context/AuthContext';
 
-type TabId = 'dashboard' | 'review' | 'guide';
+type TabId = 'dashboard' | 'review' | 'guide' | 'contabili';
 
-const TABS: { id: TabId; label: string; icon: string }[] = [
+const TABS_BAZA: { id: TabId; label: string; icon: string }[] = [
   { id: 'dashboard', label: 'Dashboard', icon: '📊' },
   { id: 'review', label: 'Revizie Documente', icon: '🔍' },
   { id: 'guide', label: 'Ghid Antrenare', icon: '📖' },
 ];
 
+const TAB_CONTABILI: { id: TabId; label: string; icon: string } = {
+  id: 'contabili',
+  label: 'Contabili',
+  icon: '👤',
+};
+
 export default function Training() {
+  const { user } = useAuth();
+  const esteAdmin = (user?.role || '').toLowerCase() === 'admin' || (user?.role || '').toLowerCase() === 'super_admin';
+  const TABS = esteAdmin ? [...TABS_BAZA, TAB_CONTABILI] : TABS_BAZA;
+
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
 
   return (
@@ -62,6 +75,7 @@ export default function Training() {
         {activeTab === 'dashboard' && <TrainingDashboard />}
         {activeTab === 'review' && <DocumentReview />}
         {activeTab === 'guide' && <TrainingGuide />}
+        {activeTab === 'contabili' && esteAdmin && <ContabilManagement />}
       </div>
 
       <Footer />
