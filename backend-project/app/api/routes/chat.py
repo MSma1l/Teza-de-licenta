@@ -1,14 +1,17 @@
 """
-Chat API - Sistem inteligent de raspunsuri cu escaladare.
+Chat API - Sistem inteligent de raspunsuri cu 3 nivele:
 
-Flux:
 1. Clientul trimite intrebare
-2. AI cauta in baza FAQ cea mai potrivita intrebare/raspuns
-3. Daca confidence >= 0.97 -> raspunde automat
-4. Daca confidence < 0.97 -> escaladeaza la contabil, notifica clientul
-5. Contabilul raspunde, raspunsul se salveaza in FAQ pentru viitor
+2. FAQ keyword match (SequenceMatcher) - daca confidence >= 0.97 -> raspunde instant
+3. Altfel -> Djarvis (agent RAG local cu Ollama + legislatie RM) raspunde
+4. Daca Djarvis nu reuseste (timeout, ollama down) -> escaladeaza la contabil
+5. Contabilul raspunde -> raspunsul se salveaza in FAQ pentru viitor
 """
+import logging
+import os
 from difflib import SequenceMatcher
+
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -25,9 +28,34 @@ from app.schemas.chat import (
     FaqEntryResponse,
 )
 
+log = logging.getLogger(__name__)
 router = APIRouter(prefix="/chat", tags=["Chat & FAQ"])
 
 CONFIDENCE_THRESHOLD = 0.97
+
+# URL-ul ai-service (Djarvis endpoint). Intern in reteaua Docker.
+AI_SERVICE_URL = os.getenv("AI_SERVICE_URL", "http://ai-service:3778")
+DJARVIS_TIMEOUT = float(os.getenv("DJARVIS_TIMEOUT", "90"))
+
+
+def intreaba_djarvis(intrebare: str, istoric: list[dict] | None = None) -> str | None:
+    """
+    Apeleaza /api/v1/agent/ask in ai-service si intoarce raspunsul text.
+    Intoarce None la orice esec — caller-ul va escalada la contabil.
+    """
+    payload = {"question": intrebare, "history": istoric or [], "top_k": 5}
+    try:
+        with httpx.Client(timeout=DJARVIS_TIMEOUT) as c:
+            r = c.post(f"{AI_SERVICE_URL}/api/v1/agent/ask", json=payload)
+            if r.status_code == 503:
+                log.info("Djarvis indisponibil (503) — escaladam")
+                return None
+            r.raise_for_status()
+            raspuns = (r.json().get("answer") or "").strip()
+            return raspuns or None
+    except Exception as e:
+        log.warning(f"Djarvis call failed: {e}")
+        return None
 
 
 def find_best_faq_match(question: str, db: Session) -> tuple[FaqEntry | None, float]:
@@ -108,13 +136,42 @@ def send_message(
         db.refresh(ai_msg)
         return ai_msg
     else:
-        # Escaladare la contabil
+        # Nu am match FAQ sigur -> cere Djarvis (agent RAG local).
+        # Trimitem si ultimile 6 mesaje din conversatie ca istoric.
+        istoric = []
+        mesaje_recente = (
+            db.query(ChatMessage)
+            .filter(ChatMessage.conversation_id == conversation.id)
+            .filter(ChatMessage.id != client_msg.id)
+            .order_by(ChatMessage.created_at.desc())
+            .limit(6)
+            .all()
+        )
+        for m in reversed(mesaje_recente):
+            rol = "user" if m.sender_type == "client" else "assistant"
+            istoric.append({"role": rol, "content": m.content or ""})
+
+        raspuns_djarvis = intreaba_djarvis(data.message, istoric)
+
+        if raspuns_djarvis:
+            ai_msg = ChatMessage(
+                conversation_id=conversation.id,
+                sender_type="ai",
+                content=raspuns_djarvis,
+                confidence=None,  # raspuns de la Djarvis, nu dintr-un FAQ
+            )
+            db.add(ai_msg)
+            db.commit()
+            db.refresh(ai_msg)
+            return ai_msg
+
+        # Djarvis indisponibil / a esuat -> escaladare la contabil (fallback)
         conversation.is_escalated = True
         escalation_text = (
-            "Multumim pentru intrebare! Nu sunt suficient de sigur pe raspuns "
-            "(precizie {:.0f}%). Am creat o solicitare catre contabilul nostru. "
-            "Veti primi o notificare cand raspunsul profesional este gata."
-        ).format(confidence * 100)
+            "Nu am putut formula un raspuns sigur acum. "
+            "Am creat o solicitare pentru contabilul tau — vei primi notificare cand "
+            "raspunsul profesional e gata."
+        )
 
         ai_msg = ChatMessage(
             conversation_id=conversation.id,

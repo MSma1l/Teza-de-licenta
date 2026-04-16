@@ -49,6 +49,8 @@ services:
       UPLOAD_DIR: storage/uploads
       MAX_UPLOAD_SIZE_MB: 10
       ENCRYPTION_KEY_DEFAULT: ${ENCRYPTION_KEY_DEFAULT:-7iHXIqYV3xK7eouRb3UZ+jFD6aqqQ3RLFq87etDofo8=}
+      AI_SERVICE_URL: http://ai-service:3778
+      DJARVIS_TIMEOUT: "90"
     depends_on:
       postgres:
         condition: service_healthy
@@ -76,6 +78,10 @@ services:
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/1
       LOG_LEVEL: INFO
+      OLLAMA_URL: http://ollama:11434
+      OLLAMA_MODEL: qwen2.5:7b-instruct
+      LEGISLATIE_INDEX_DIR: /app/model_storage/legislatie_index
+      EMBEDDER_MODEL: sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
     depends_on:
       postgres:
         condition: service_healthy
@@ -85,6 +91,7 @@ services:
       - ai_model_storage:/app/model_storage
       - ai_training_data:/app/training_data
       - ./backend-project/storage:/app/storage
+      - ./backend-project/training-data/legislatie:/app/training_data/legislatie:ro
 
   celery-worker:
     build: ./backend-project/ai-service
@@ -124,8 +131,23 @@ services:
       redis:
         condition: service_healthy
 
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ai_contabil_ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+    # Fara GPU (CPU-only). Daca ai NVIDIA + nvidia-container-toolkit, adauga:
+    #   deploy:
+    #     resources:
+    #       reservations:
+    #         devices: [{ driver: nvidia, count: 1, capabilities: [gpu] }]
+
 volumes:
   postgres_data:
   redis_data:
   ai_model_storage:
   ai_training_data:
+  ollama_models:

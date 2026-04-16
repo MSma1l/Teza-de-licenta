@@ -12,8 +12,9 @@ import { OpenOnWeb } from '@/components/open-on-web';
 import { EcranDatePersonale } from '@/components/profil/ecran-date-personale';
 import { EcranSchimbaParola } from '@/components/profil/ecran-schimba-parola';
 import { EcranSecuritate2FA } from '@/components/profil/ecran-securitate-2fa';
+import { EcranSecuritate } from '@/components/profil/ecran-securitate';
 
-type EcranActiv = 'profil' | 'date' | 'parola' | '2fa';
+type EcranActiv = 'profil' | 'date' | 'parola' | 'securitate' | '2fa';
 
 export default function EcranProfil() {
   const insets = useSafeAreaInsets();
@@ -30,6 +31,13 @@ export default function EcranProfil() {
 
   if (ecranActiv === 'date') return <EcranDatePersonale laInchidere={laInchidere} />;
   if (ecranActiv === 'parola') return <EcranSchimbaParola laInchidere={laInchidere} />;
+  if (ecranActiv === 'securitate')
+    return (
+      <EcranSecuritate
+        laInchidere={laInchidere}
+        laDeschide2FA={() => setEcranActiv('2fa')}
+      />
+    );
   if (ecranActiv === '2fa') return <EcranSecuritate2FA laInchidere={laInchidere} />;
 
   return (
@@ -70,6 +78,17 @@ export default function EcranProfil() {
             <View style={{ flex: 1 }}>
               <Text style={stiluri.cardItemTitlu}>Schimba parola</Text>
               <Text style={stiluri.cardItemDescriere}>Pentru securitate, schimba periodic</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={CuloriApp.textEstompat} />
+          </Pressable>
+
+          <Pressable style={({ pressed }) => [stiluri.cardItem, pressed && { opacity: 0.7 }]} onPress={() => setEcranActiv('securitate')}>
+            <View style={[stiluri.cardItemIcon, { backgroundColor: '#dbeafe' }]}>
+              <Ionicons name="shield-outline" size={20} color={CuloriApp.secundar} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={stiluri.cardItemTitlu}>Securitate</Text>
+              <Text style={stiluri.cardItemDescriere}>Conecteaza web prin QR, provocari 2FA</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={CuloriApp.textEstompat} />
           </Pressable>

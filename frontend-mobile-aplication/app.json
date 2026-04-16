@@ -38,6 +38,21 @@
             "backgroundColor": "#000000"
           }
         }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Permiteti AI-Contabil sa acceseze camera pentru a scana documente (facturi, bonuri, contracte).",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Permiteti AI-Contabil sa acceseze galeria pentru a incarca documente salvate anterior.",
+          "cameraPermission": "Permiteti AI-Contabil sa acceseze camera pentru a fotografia documente."
+        }
       ]
     ],
     "experiments": {

@@ -1,12 +1,16 @@
-FROM python:3.12-slim
+FROM python:3.12-slim-bookworm
 
 WORKDIR /app
 
-# System dependencies for OpenCV + PaddlePaddle
+# System dependencies for OpenCV + PaddlePaddle.
+# Pinned pe bookworm pentru ca trixie a redenumit libgl1-mesa-glx -> libgl1.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libgl1-mesa-glx \
+    libgl1 \
     libglib2.0-0 \
     libgomp1 \
+    libsm6 \
+    libxext6 \
+    libxrender1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies

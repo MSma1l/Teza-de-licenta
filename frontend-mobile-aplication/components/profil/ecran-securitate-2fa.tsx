@@ -8,22 +8,26 @@ import {
   StyleSheet, Alert, ActivityIndicator, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CuloriApp } from '@/constants/culori';
 import {
   obtineProvocariPending,
   verificaCod2FA,
   type ProvocarePending,
 } from '@/lib/api/serviciu-2fa';
+import { ScanerQrWeb } from '@/components/scaner-qr-web';
 
 interface Props {
   laInchidere: () => void;
 }
 
 export function EcranSecuritate2FA({ laInchidere }: Props) {
+  const insets = useSafeAreaInsets();
   const [provocari, setProvocari] = useState<ProvocarePending[]>([]);
   const [seIncarca, setSeIncarca] = useState(true);
   const [coduri, setCoduri] = useState<Record<string, string>>({});
   const [verificareInCurs, setVerificareInCurs] = useState<string | null>(null);
+  const [vizibilScanerQr, setVizibilScanerQr] = useState(false);
 
   const incarcaProvocari = useCallback(async () => {
     setSeIncarca(true);
@@ -120,13 +124,13 @@ export function EcranSecuritate2FA({ laInchidere }: Props) {
   };
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { paddingTop: insets.top + 12 }]}>
       <View style={s.header}>
-        <Pressable onPress={laInchidere} hitSlop={10}>
-          <Ionicons name="arrow-back" size={24} color={CuloriApp.textPrimar} />
+        <Pressable onPress={laInchidere} hitSlop={16} style={s.butonInapoi}>
+          <Ionicons name="arrow-back" size={22} color={CuloriApp.textPrimar} />
         </Pressable>
         <Text style={s.titlu}>Securitate 2FA</Text>
-        <View style={{ width: 24 }} />
+        <View style={{ width: 40 }} />
       </View>
 
       {/* Info */}
@@ -136,6 +140,23 @@ export function EcranSecuritate2FA({ laInchidere }: Props) {
           Cand faci o actiune sensibila pe web (logare, schimbare parola, descarcare raport), aici apare un cod de confirmare.
         </Text>
       </View>
+
+      {/* Card conectare web prin QR */}
+      <Pressable
+        onPress={() => setVizibilScanerQr(true)}
+        style={({ pressed }) => [s.cardQr, pressed && { opacity: 0.9 }]}
+      >
+        <View style={s.cardQrIcon}>
+          <Ionicons name="qr-code" size={26} color="#fff" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={s.cardQrTitlu}>Conecteaza web prin QR</Text>
+          <Text style={s.cardQrDescriere}>
+            Scaneaza QR-ul din pagina de login web si intra instant, fara parola
+          </Text>
+        </View>
+        <Ionicons name="arrow-forward" size={20} color="#fff" />
+      </Pressable>
 
       <Text style={s.subtitlu}>
         Provocari in asteptare ({provocari.length})
@@ -159,15 +180,26 @@ export function EcranSecuritate2FA({ laInchidere }: Props) {
           contentContainerStyle={{ paddingBottom: 20 }}
         />
       )}
+
+      <ScanerQrWeb
+        vizibil={vizibilScanerQr}
+        laInchide={() => setVizibilScanerQr(false)}
+      />
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: CuloriApp.fundalSecundar, padding: 20 },
+  container: { flex: 1, backgroundColor: CuloriApp.fundalSecundar, paddingHorizontal: 20, paddingBottom: 20 },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: 16, minHeight: 44,
+  },
+  butonInapoi: {
+    width: 40, height: 40, borderRadius: 20,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: CuloriApp.fundalCard,
+    borderWidth: 1, borderColor: CuloriApp.bordura,
   },
   titlu: { fontSize: 20, fontWeight: '800', color: CuloriApp.textPrimar },
   subtitlu: { fontSize: 14, fontWeight: '700', color: CuloriApp.textSecundar, marginBottom: 12 },
@@ -209,4 +241,30 @@ const s = StyleSheet.create({
     width: 48, height: 48, borderRadius: 14,
     backgroundColor: CuloriApp.succes, alignItems: 'center', justifyContent: 'center',
   },
+
+  cardQr: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: CuloriApp.primar,
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 18,
+    ...Platform.select({
+      ios: {
+        shadowColor: CuloriApp.primar,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.25,
+        shadowRadius: 16,
+      },
+      android: { elevation: 6 },
+    }),
+  },
+  cardQrIcon: {
+    width: 48, height: 48, borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  cardQrTitlu: { fontSize: 15, fontWeight: '800', color: '#fff' },
+  cardQrDescriere: { fontSize: 12, color: 'rgba(255,255,255,0.85)', marginTop: 2, lineHeight: 16 },
 });
