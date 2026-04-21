@@ -4,7 +4,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import SendIcon from '@mui/icons-material/Send';
 import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
-import { sendChatMessage, type ChatMessage } from '../../api/chatApi';
+import { sendChatMessage, fetchSuggestions, type ChatMessage, type Suggestion } from '../../api/chatApi';
 import { useLanguage } from '../../context/LanguageContext';
 import type { Lang } from '../../context/LanguageContext';
 
@@ -58,10 +58,11 @@ const ChatWidget = () => {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Greeting message on first open
+  // Greeting message + starter suggestions on first open
   useEffect(() => {
     if (open && messages.length === 0) {
       setMessages([{
@@ -70,6 +71,8 @@ const ChatWidget = () => {
         text: tr.greeting,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       }]);
+      // Incarcam intrebarile de start
+      fetchSuggestions().then(setSuggestions).catch(() => setSuggestions([]));
     }
   }, [open]);
 
@@ -83,8 +86,8 @@ const ChatWidget = () => {
     if (open) inputRef.current?.focus();
   }, [open]);
 
-  const handleSend = async () => {
-    const text = input.trim();
+  const handleSend = async (textOverride?: string) => {
+    const text = (textOverride ?? input).trim();
     if (!text || sending) return;
 
     const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -96,8 +99,9 @@ const ChatWidget = () => {
       text,
       time: now,
     }]);
-    setInput('');
+    if (!textOverride) setInput('');
     setSending(true);
+    setSuggestions([]);  // ascunde chips-urile pana vine raspunsul
 
     try {
       const response: ChatMessage = await sendChatMessage(text, conversationId || undefined);
@@ -110,6 +114,9 @@ const ChatWidget = () => {
         confidence: response.confidence,
         time: new Date(response.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       }]);
+
+      // Dupa raspuns, refresh suggestions cu context (intrebari relate)
+      fetchSuggestions(text).then(setSuggestions).catch(() => setSuggestions([]));
     } catch {
       setMessages((prev) => [...prev, {
         id: `error-${Date.now()}`,
@@ -211,6 +218,27 @@ const ChatWidget = () => {
             <div ref={messagesEndRef} />
           </div>
 
+          {/* Suggested questions (chips) */}
+          {!sending && suggestions.length > 0 && (
+            <div className="px-4 pt-2 pb-1 bg-white border-t border-neutral-200 flex-shrink-0">
+              <div className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide mb-1.5">
+                Intrebari sugerate
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {suggestions.slice(0, 5).map((s, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => handleSend(s.q)}
+                    className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors ${_catBadge(s.cat)}`}
+                    title={`Categorie: ${s.cat}`}
+                  >
+                    {s.q}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Input */}
           <div className="flex items-center gap-2 px-4 py-3 border-t border-neutral-200 bg-white flex-shrink-0">
             <input
@@ -238,5 +266,22 @@ const ChatWidget = () => {
     </>
   );
 };
+
+function _catBadge(cat: string): string {
+  const map: Record<string, string> = {
+    tva: 'bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-100',
+    impozit: 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100',
+    freelance: 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100',
+    salarii: 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100',
+    fisc: 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100',
+    raport: 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100',
+    deductibil: 'bg-teal-50 text-teal-700 border-teal-200 hover:bg-teal-100',
+    firma: 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200 hover:bg-fuchsia-100',
+    contract: 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100',
+    vamal: 'bg-cyan-50 text-cyan-700 border-cyan-200 hover:bg-cyan-100',
+    altele: 'bg-neutral-50 text-neutral-700 border-neutral-200 hover:bg-neutral-100',
+  };
+  return map[cat] || map.altele;
+}
 
 export default ChatWidget;

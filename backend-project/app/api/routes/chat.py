@@ -38,6 +38,33 @@ AI_SERVICE_URL = os.getenv("AI_SERVICE_URL", "http://ai-service:3778")
 DJARVIS_TIMEOUT = float(os.getenv("DJARVIS_TIMEOUT", "90"))
 
 
+@router.get("/suggestions")
+def get_djarvis_suggestions(
+    after: str | None = None,
+    limit: int = 5,
+    current_user: User = Depends(get_current_user),
+):
+    """Proxy catre ai-service pentru intrebari sugerate Djarvis.
+
+    Returneaza starter questions cand `after` lipseste. Starter-ul e personalizat
+    per rol: client vede ghiduri de utilizare + legislatie de baza; contabil vede
+    flow-ul sau de lucru + legislatie avansata.
+    """
+    try:
+        # current_user.role poate fi enum UserRole sau string — extragem `.value` daca e enum
+        rol_value = getattr(current_user.role, "value", current_user.role) or ""
+        params = {"limit": str(limit), "rol": str(rol_value).lower()}
+        if after:
+            params["after"] = after
+        with httpx.Client(timeout=5) as c:
+            r = c.get(f"{AI_SERVICE_URL}/api/v1/agent/suggestions", params=params)
+            r.raise_for_status()
+            return r.json()
+    except Exception as e:
+        log.warning(f"Suggestions fetch failed: {e}")
+        return {"suggestions": []}
+
+
 def intreaba_djarvis(intrebare: str, istoric: list[dict] | None = None) -> str | None:
     """
     Apeleaza /api/v1/agent/ask in ai-service si intoarce raspunsul text.

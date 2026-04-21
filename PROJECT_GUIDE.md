@@ -15,6 +15,9 @@
 12. [Securitate](#12-securitate)
 13. [Toate Rutele API](#13-toate-rutele-api)
 14. [Deployment](#14-deployment)
+15. [Djarvis — Agent RAG Legislativ](#15-djarvis--agent-rag-legislativ)
+16. [Rapoarte SFS — Formulare Fiscale Automate](#16-rapoarte-sfs--formulare-fiscale-automate)
+17. [Panou Admin & Contabil](#17-panou-admin--contabil)
 
 ---
 
@@ -818,7 +821,155 @@ ENCRYPTION_KEY_DEFAULT=<base64-32-bytes>
 ## Autor
 
 **Maxim Chistol** — Teza de Licenta
-Universitatea din Moldova
+Universitatea  Tehnica din Moldova
+
+---
+
+## 15. Djarvis — Agent RAG Legislativ
+
+**Djarvis** e un agent conversational care raspunde la intrebari despre legislatia fiscala si contabila a Republicii Moldova. Nume-ul e inspirat din JARVIS (Iron Man), dar rebranded cu "D".
+
+### Arhitectura — Retrieval-Augmented Generation (RAG)
+
+Spre deosebire de un chatbot clasic care "halucineaza" raspunsuri din cunoasterea modelului, Djarvis **cauta intai in corpus-ul de legislatie**, apoi pune LLM-ul sa raspunda strict pe ce a gasit:
+
+```
+Intrebare user
+     │
+     ▼
+sentence-transformers multilingual  (embedding 384-dim)
+     │
+     ▼
+FAISS IndexFlatIP (cosine similarity)  — top-5 chunks relevante
+     │
+     ▼
+Prompt sistem + chunks + istoric conversatie + intrebare
+     │
+     ▼
+Ollama qwen2.5:3b-instruct  (keep_alive=30min, num_ctx=2048)
+     │
+     ▼
+Raspuns cu citari [1], [2] + pas practic sugerat
+```
+
+### Componente cod
+
+| Fisier | Rol |
+|---|---|
+| `ai-service/app/agent/prompt.py` | Prompt de sistem — personalitate Djarvis, reguli: foloseste context cand exista, raspunde din cunostinte cand nu, cere detalii cand e vag, nu inventa articole |
+| `ai-service/app/agent/ollama_client.py` | Client HTTP async (httpx) catre Ollama; functii `genereaza()` si `genereaza_stream()`; `keep_alive=30m` |
+| `ai-service/app/agent/retriever.py` | Singleton `LegisReteriever` — incarca embedder (~90 MB) + index FAISS + mapping la primul apel |
+| `ai-service/app/api/routes/agent.py` | Endpoint-uri `POST /api/v1/agent/ask` si `GET /api/v1/agent/health` |
+| `ai-service/scripts/build_legislation_index.py` | Script offline — citeste `.jsonl`-urile, chunk-uieste (~900 chars, overlap 120), normalizeaza embeddings, scrie `index.faiss` + `mapping.json` |
+
+### Corpus de legislatie
+
+Locatia: `backend-project/training-data/legislatie/*.jsonl`. Fiecare linie: `{"source": "...", "text": "..."}`.
+
+Corpus actual: **51 chunks** in 2 fisiere:
+- `seed_legislatie_rm.jsonl` — 18 articole din Cod Fiscal (art. 15, 96, 102, 117, 187, 228, 86, 277, 12^1, 88), Legea Contabilitatii 287/2017, Codul Muncii art. 130, HG 693/2018, + scenarii practice (decizie SFS, intarziere TVA, angajare prim angajat, inregistrare SRL)
+- `seed_extins_scenarii.jsonl` — 33 scenarii: freelance/IT Park, II vs SRL, chirie, part-time, concedii (anual/medical/maternitate), demisie, concediere, salariu brut/net, CNAS/CNAM, IPC21/D200, e-Factura, pierderi fiscale, cesiune parti sociale, import/export, deductibile, casa marcat, sediu, zile libere, cadouri.
+
+Cand vrei sa adaugi continut:
+1. Adauga linii in `.jsonl` (sau fisier nou in folder)
+2. Reruleaza `docker exec ai_contabil_ai_service python scripts/build_legislation_index.py`
+3. Restart ai-service (pentru a forta reincarcare retriever) sau apeleaza endpoint-ul `/health` care re-verifica
+
+### Integrare cu chat-ul clasic
+
+Backend-ul `chat.py` cheama Djarvis cand FAQ match < 0.97:
+
+```python
+if faq_match and confidence >= 0.97:
+    # FAQ instant
+elif djarvis_raspunde := intreaba_djarvis(mesaj, istoric):
+    # Djarvis RAG
+else:
+    # Escaladare la contabil
+```
+
+Astfel ai un **sistem in 3 nivele**: FAQ rapid → Djarvis conversational → Contabil uman (escaladare reala).
+
+### Performanta onesta
+
+- **Cold start** (model neincarcat in RAM): 30-60 secunde prima intrebare
+- **Warm** (keep_alive activ, model in RAM): 5-20 secunde per intrebare
+- **Hardware minim**: 4 GB RAM libere pentru modelul 3B + overhead
+- **Cu GPU NVIDIA**: 1-3 secunde per intrebare (nu e inca configurat)
+
+### UI
+
+- **Web** — `ChatWidget.tsx` (bula in colt dreapta-jos). Rebranded "Djarvis".
+- **Mobile** — `components/chat-djarvis/` (modal full-screen). Deschis din banner "Intrebare urgenta" sau din lista conversatiilor.
+
+---
+
+## 16. Rapoarte SFS — Formulare Fiscale Automate
+
+Sistemul genereaza PDF-uri pentru **6 formulare fiscale** oficiale ale Serviciului Fiscal de Stat (RM), cu calcule automate:
+
+| Cod | Frecventa | Deadline | Calcule in PDF |
+|---|---|---|---|
+| **IPC21** | lunar | 25 a lunii urm. | Impozit 12% + CAS 9%/24% + CAM 4.5%/4.5% pe salarii, scutire personala 2475 MDL/luna |
+| **2-INV** | trimestrial | 25 a lunii de dupa trim. | Cumul valori investitii brute |
+| **TL13** | semestrial | 25 iul / 25 ian | Taxe locale per categorie × cota × baza |
+| **TALS21** | anual | 30 aprilie | Raport anual (reutilizeaza builder-ul 2-INV cu flag anual) |
+| **IRM19** | la cerere | — | Sablon per actiune (angajare/concediu/eliberare/modificare_salariu/suspendare) |
+| **SIMM24** | la cerere | — | Factura fiscala cu TVA 20%, subtotal, total cu TVA |
+
+### Fisiere cheie
+
+- `backend-project/app/services/rapoarte_sfs.py` — 6 functii `build_*_pdf()` care intorc `bytes` PDF. Folosesc `reportlab` cu stiluri uniforme (antet SFS, tabele cu header albastru/total highlighted, footer cu note legale).
+- `backend-project/app/api/routes/rapoarte_sfs.py` — router `/api/v1/ac/reports/sfs/*` cu endpoint-urile de generare, upcoming, download.
+- `backend-project/app/models/report.py` — `ReportType` extins cu `IPC21/RAPORT_2INV_TRIM/TL13/TALS21/IRM19/SIMM24`; coloane noi `frequency` + `due_date`.
+
+### Reminder automat de deadline
+
+`GET /api/v1/ac/reports/sfs/upcoming` calculeaza pentru urmatoarele 60 zile care formulare periodice are de depus user-ul. Fiecare item are `days_left` si `urgency` (`urgent` <=3 zile, `warning` <=10 zile, `normal` peste). Frontend-ul afiseaza asta ca notificare + card in home.
+
+Deadline-urile sunt calculate din functii simple (`_deadline_pentru()`), nu hardcoded — respecta regulile fiscale reale (25 a lunii urmatoare etc.).
+
+### Limita onesta de fidelitate
+
+Aceste PDF-uri **nu sunt pixel-perfect** cu templatele oficiale SFS (care sunt restrictionate). Reproducem:
+- Codul formularului (IPC21, SIMM24 etc.) si denumirea oficiala
+- Datele obligatorii (contribuabil, cod fiscal, perioada)
+- Calculele corecte conform legislatiei
+- Footer care clarifica ca pentru depunere oficiala e nevoie de e-Factura / SIA / semnatura electronica
+
+Pentru **depunerea efectiva la SFS**, user-ul trebuie sa ia datele din PDF-ul generat si sa le copieze pe portalul oficial `sfs.md` — PDF-ul serveste ca draft/arhiva.
+
+---
+
+## 17. Panou Admin & Contabil
+
+Aplicatia are o ierarhie clara de roluri: **ADMIN → CONTABIL → CLIENT**.
+
+### Admin
+
+Endpoint-uri (admin-only, cerinta `require_role(UserRole.ADMIN)`):
+- `POST /api/v1/ac/users/create-contabil` — creeaza direct un cont cu rol CONTABIL (fara inregistrare ca client mai intai)
+- `PATCH /api/v1/ac/users/{user_id}/role` — schimba rolul oricui (`admin`/`contabil`/`client`)
+- `POST /api/v1/ac/users/admin/assign-client` — asigneaza un client la un contabil (body: `{contabil_id, client_id}`)
+- `DELETE /api/v1/ac/users/admin/assign-client` — dezasigneaza
+- `GET /api/v1/ac/users/contabil/{id}/clients` — clientii unui contabil anume
+
+UI web: `/admin` (pagina standalone) si `/training` tab "Contabili" (acelasi continut, integrat in pagina Antrenare). Tab-ul e ascuns automat pentru non-admin.
+
+### Contabil
+
+- `GET /api/v1/ac/users/my-clients` — clientii asignati de admin
+- `POST /api/v1/ac/users/assign-client?client_id=...` — contabilul ISI poate si el asigna un client (auto-service, pastrat pentru flexibilitate — admin poate limita acest flux)
+
+UI web: `/contabil` — lista cu card-uri clienti, link spre `/documents?client=...` si `/reports?client=...`. Separare stricta: fiecare client are documentele proprii, filtrate pe `owner_id`. Contabilul NU vede documentele altor contabili.
+
+### Client
+
+Vede doar propriile documente si chat-uri. Rolul default la register.
+
+### Guard-ul de rol pe frontend
+
+`App.tsx` are componenta `RoleGuard` care redirect-eaza automat la `/home` daca rolul nu are permisiuni pe pagina. Nu permite acces "ghicit" la URL.
 
 ---
 

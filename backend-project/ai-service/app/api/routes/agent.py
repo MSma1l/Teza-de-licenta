@@ -20,8 +20,26 @@ from loguru import logger
 from app.agent.prompt import SYSTEM_PROMPT, build_user_prompt
 from app.agent.ollama_client import genereaza, model_disponibil
 from app.agent.retriever import retriever
+from app.agent.suggestions import sugereaza, lista_toate
 
 router = APIRouter(prefix="/agent", tags=["Djarvis Agent"])
+
+
+@router.get("/suggestions")
+def suggestions(after: str | None = None, limit: int = 5, rol: str | None = None):
+    """
+    Intrebari sugerate pentru user.
+    - fara `after` -> starter (diferit per rol: client / contabil / default)
+    - cu `after=<ultimul mesaj>` -> intrebari din aceeasi categorie + cateva diverse
+    - `rol` optional: "client" / "contabil" / "admin" — influenteaza starter-ul
+    """
+    return {"suggestions": sugereaza(after, limit=min(max(limit, 1), 10), rol=rol)}
+
+
+@router.get("/suggestions/all")
+def suggestions_all():
+    """Lista completa — pentru pagina FAQ sau debug."""
+    return {"items": lista_toate(), "total": len(lista_toate())}
 
 
 class MesajIstoric(BaseModel):

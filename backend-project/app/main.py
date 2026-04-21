@@ -5,7 +5,7 @@ import os
 
 from app.core.config import settings
 from app.core.database import engine, Base
-from app.api.routes import auth, users, documents, reports, notifications, training, chat, two_factor, qr_login
+from app.api.routes import auth, users, documents, reports, notifications, training, chat, two_factor, qr_login, rapoarte_sfs
 
 # Import all models so they are registered with Base
 from app.models import (  # noqa: F401
@@ -18,6 +18,18 @@ from app.models import (  # noqa: F401
 # Create tables (in production use Alembic migrations, skip in testing)
 if os.environ.get("TESTING") != "1":
     Base.metadata.create_all(bind=engine)
+
+    # Seed automat al conturilor test (ADMIN + CONTABIL + CLIENT + link).
+    # Dezactiveaza cu SEED_TEST_ACCOUNTS=0 in productie.
+    try:
+        from sqlalchemy.orm import sessionmaker
+        from app.core.seed_accounts import seed_test_accounts
+        SessionSeed = sessionmaker(bind=engine)
+        with SessionSeed() as _db:
+            seed_test_accounts(_db)
+    except Exception as _e:
+        import logging
+        logging.getLogger(__name__).warning(f"Seed test accounts skipped: {_e}")
 
 app = FastAPI(
     title="AI-Contabil API",
@@ -51,6 +63,7 @@ app.include_router(training.router, prefix="/api/v1/ac")
 app.include_router(chat.router, prefix="/api/v1/ac")
 app.include_router(two_factor.router, prefix="/api/v1/ac")
 app.include_router(qr_login.router, prefix="/api/v1/ac")
+app.include_router(rapoarte_sfs.router, prefix="/api/v1/ac")
 
 
 @app.get("/api/v1/ac/health")

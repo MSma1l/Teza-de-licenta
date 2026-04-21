@@ -9,6 +9,17 @@ from app.core.database import Base
 
 
 class ReportType(str, enum.Enum):
+    # --- Formulare SFS oficiale pentru afacere mica ---
+    # Periodice (au deadline fix, genereaza notificari automate)
+    IPC21 = "ipc21"                      # Lunar — contributii + impozit salarii
+    RAPORT_2INV_TRIM = "2inv_trim"       # Trimestrial — 2-INV situatia investitiilor
+    TL13 = "tl13"                        # Semestrial — taxele locale
+    TALS21 = "tals21"                    # Anual — raport anual consolidat (inclusiv 2-INV anual)
+    # La cerere (fara deadline — cand se intampla evenimentul)
+    IRM19 = "irm19"                      # Angajare / concediu / eliberare din functie
+    SIMM24 = "simm24"                    # Factura fiscala de vanzare
+
+    # --- Rapoarte legacy / tehnice (pentru compatibilitate date vechi) ---
     BILANT_CONTABIL = "bilant_contabil"
     BALANTA_VERIFICARE = "balanta_verificare"
     REGISTRU_JURNAL = "registru_jurnal"
@@ -23,6 +34,15 @@ class ReportType(str, enum.Enum):
     DECONT_TVA = "decont_tva"
     RAPORT_SALARII = "raport_salarii"
     ALTELE = "altele"
+
+
+class ReportFrequency(str, enum.Enum):
+    """Cat de des trebuie depus un formular la SFS."""
+    LUNAR = "lunar"          # pana pe 25 a lunii urmatoare
+    TRIMESTRIAL = "trimestrial"   # pana pe 25 a lunii de dupa trimestru
+    SEMESTRIAL = "semestrial"     # pana pe 25 iulie / 25 ianuarie
+    ANUAL = "anual"          # pana pe 25 martie sau 30 aprilie
+    LA_CERERE = "la_cerere"  # fara deadline (evenimente)
 
 
 class ReportStatus(str, enum.Enum):
@@ -48,6 +68,9 @@ class Report(Base):
     period_end: Mapped[str | None] = mapped_column(String(20), nullable=True)
     file_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
     content: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON cu datele raportului
+    # Noi — pentru rapoartele SFS:
+    frequency: Mapped[str | None] = mapped_column(String(20), nullable=True)  # lunar/trim/sem/anual/la_cerere
+    due_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
