@@ -105,7 +105,9 @@ def main():
     import numpy as np
 
     embedder = SentenceTransformer(args.model)
-    textele = [c["text"] for c in chunks]
+    # Prepend source (titlu) la text pentru embed → retriever matcha mai bine
+    # intrebari gen "Cum incarc factura" cand titlul chunk-ului e "Ghid client — Cum incarc...".
+    textele = [f"{c['source']}\n\n{c['text']}" for c in chunks]
     emb = embedder.encode(
         textele,
         batch_size=32,
