@@ -13,7 +13,7 @@ class TestReports:
     def test_create_report(self, client, db, test_user, test_contabil, contabil_headers):
         self._assign_client(db, test_contabil.id, test_user.id)
 
-        resp = client.post("/api/reports/", headers=contabil_headers, json={
+        resp = client.post("/api/v1/ac/reports/", headers=contabil_headers, json={
             "client_id": test_user.id,
             "title": "Raport TVA Q1",
             "report_type": "raport_tva",
@@ -26,7 +26,7 @@ class TestReports:
         assert data["status"] == "draft"
 
     def test_create_report_client_forbidden(self, client, test_user, auth_headers):
-        resp = client.post("/api/reports/", headers=auth_headers, json={
+        resp = client.post("/api/v1/ac/reports/", headers=auth_headers, json={
             "client_id": test_user.id,
             "title": "Unauthorized Report",
             "report_type": "altele",
@@ -35,7 +35,7 @@ class TestReports:
 
     def test_create_report_unassigned_client(self, client, db, test_user, test_contabil, contabil_headers):
         # Nu asignăm clientul
-        resp = client.post("/api/reports/", headers=contabil_headers, json={
+        resp = client.post("/api/v1/ac/reports/", headers=contabil_headers, json={
             "client_id": test_user.id,
             "title": "Raport",
             "report_type": "altele",
@@ -52,7 +52,7 @@ class TestReports:
         db.add(report)
         db.commit()
 
-        resp = client.get("/api/reports/", headers=contabil_headers)
+        resp = client.get("/api/v1/ac/reports/", headers=contabil_headers)
         assert resp.status_code == 200
         assert resp.json()["total"] == 1
 
@@ -66,7 +66,7 @@ class TestReports:
         db.add(report)
         db.commit()
 
-        resp = client.get("/api/reports/", headers=auth_headers)
+        resp = client.get("/api/v1/ac/reports/", headers=auth_headers)
         assert resp.status_code == 200
         assert resp.json()["total"] == 1
 
@@ -81,7 +81,7 @@ class TestReports:
         db.add(report)
         db.commit()
 
-        resp = client.put("/api/reports/report-001", headers=contabil_headers, json={
+        resp = client.put("/api/v1/ac/reports/report-001", headers=contabil_headers, json={
             "title": "Finalizat",
             "status": "expediat",
         })
@@ -100,5 +100,5 @@ class TestReports:
         db.add(report)
         db.commit()
 
-        resp = client.delete("/api/reports/report-del", headers=contabil_headers)
+        resp = client.delete("/api/v1/ac/reports/report-del", headers=contabil_headers)
         assert resp.status_code == 204

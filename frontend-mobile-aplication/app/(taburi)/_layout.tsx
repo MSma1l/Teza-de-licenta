@@ -13,7 +13,7 @@ export default function LayoutTaburi() {
       <Tabs.Screen name="index" options={{ title: 'Acasa' }} />
       <Tabs.Screen name="meniu" options={{ title: 'Meniu' }} />
       <Tabs.Screen name="creare" options={{ title: 'Creare' }} />
-      <Tabs.Screen name="notificari" options={{ title: 'Notificari' }} />
+      <Tabs.Screen name="notificari" options={{ title: 'Securitate' }} />
       <Tabs.Screen name="profil" options={{ title: 'Profil' }} />
     </Tabs>
   );

@@ -1,4 +1,12 @@
+networks:
+  ai_contabil_network:
+    name: ai_contabil_network
+    driver: bridge
+
 services:
+  # ==========================================
+  #  INFRASTRUCTURA — baza de date + cache
+  # ==========================================
   postgres:
     image: postgres:16-alpine
     container_name: ai_contabil_db
@@ -16,6 +24,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - ai_contabil_network
 
   redis:
     image: redis:7-alpine
@@ -31,7 +41,12 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - ai_contabil_network
 
+  # ==========================================
+  #  BACKEND — API principal FastAPI
+  # ==========================================
   backend:
     build: ./backend-project
     container_name: ai_contabil_backend
@@ -45,7 +60,7 @@ services:
       JWT_ALGORITHM: HS256
       BACKEND_HOST: 0.0.0.0
       BACKEND_PORT: 3777
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:8081}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:8081,exp://localhost:8081}
       UPLOAD_DIR: storage/uploads
       MAX_UPLOAD_SIZE_MB: 10
       ENCRYPTION_KEY_DEFAULT: ${ENCRYPTION_KEY_DEFAULT:-7iHXIqYV3xK7eouRb3UZ+jFD6aqqQ3RLFq87etDofo8=}
@@ -56,7 +71,12 @@ services:
         condition: service_healthy
     volumes:
       - ./backend-project/storage:/app/storage
+    networks:
+      - ai_contabil_network
 
+  # ==========================================
+  #  AI SERVICE — OCR, BERT, Djarvis, FAISS
+  # ==========================================
   ai-service:
     build: ./backend-project/ai-service
     container_name: ai_contabil_ai_service
@@ -71,7 +91,7 @@ services:
       ENCRYPTION_KEY_DEFAULT: ${ENCRYPTION_KEY_DEFAULT:-7iHXIqYV3xK7eouRb3UZ+jFD6aqqQ3RLFq87etDofo8=}
       AI_SERVICE_HOST: 0.0.0.0
       AI_SERVICE_PORT: 3778
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:8081,http://localhost:3777}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:8081,http://localhost:3777,exp://localhost:8081}
       MODEL_STORAGE_PATH: /app/model_storage
       TRAINING_DATA_PATH: /app/training_data
       UPLOAD_DIR: /app/storage/uploads
@@ -79,7 +99,8 @@ services:
       CELERY_RESULT_BACKEND: redis://redis:6379/1
       LOG_LEVEL: INFO
       OLLAMA_URL: http://ollama:11434
-      OLLAMA_MODEL: qwen2.5:3b-instruct
+      # 7B pe GPU = raspunsuri mult mai bune in romana, latenta similara cu 3B pe CPU
+      OLLAMA_MODEL: qwen2.5:7b-instruct
       OLLAMA_TIMEOUT: "120"
       OLLAMA_KEEP_ALIVE: "30m"
       LEGISLATIE_INDEX_DIR: /app/model_storage/legislatie_index
@@ -94,6 +115,17 @@ services:
       - ai_training_data:/app/training_data
       - ./backend-project/storage:/app/storage
       - ./backend-project/training-data/legislatie:/app/training_data/legislatie:ro
+    networks:
+      - ai_contabil_network
+    # GPU NVIDIA pentru torch/transformers/PaddleOCR. Codul foloseste deja
+    # `torch.cuda.is_available()` deci va comuta automat pe GPU cand e prezent.
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
 
   celery-worker:
     build: ./backend-project/ai-service
@@ -119,6 +151,16 @@ services:
       - ai_model_storage:/app/model_storage
       - ai_training_data:/app/training_data
       - ./backend-project/storage:/app/storage
+    networks:
+      - ai_contabil_network
+    # GPU pentru OCR + clasificare in background
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
 
   celery-beat:
     build: ./backend-project/ai-service
@@ -132,6 +174,8 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+    networks:
+      - ai_contabil_network
 
   ollama:
     image: ollama/ollama:latest
@@ -141,11 +185,97 @@ services:
       - "11434:11434"
     volumes:
       - ollama_models:/root/.ollama
-    # Fara GPU (CPU-only). Daca ai NVIDIA + nvidia-container-toolkit, adauga:
-    #   deploy:
-    #     resources:
-    #       reservations:
-    #         devices: [{ driver: nvidia, count: 1, capabilities: [gpu] }]
+    environment:
+      # Forteaza Ollama sa preia toate layerele LLM-ului pe GPU.
+      # Daca placa nu are destul VRAM, scade automat layer-by-layer.
+      OLLAMA_NUM_GPU: "999"
+      OLLAMA_KEEP_ALIVE: "30m"
+      OLLAMA_FLASH_ATTENTION: "1"
+    networks:
+      - ai_contabil_network
+    # === GPU NVIDIA ===
+    # Necesita pe host: NVIDIA driver + nvidia-container-toolkit
+    #   (pe Windows: WSL2 + Docker Desktop cu GPU acceleration ON)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  # One-shot: pull-uieste modelul Djarvis la prima pornire si iese.
+  ollama-bootstrap:
+    image: ollama/ollama:latest
+    container_name: ai_contabil_ollama_bootstrap
+    depends_on:
+      - ollama
+    volumes:
+      - ollama_models:/root/.ollama
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "Astept Ollama..."
+        until ollama list >/dev/null 2>&1; do sleep 2; done
+        echo "Pull qwen2.5:7b-instruct (Djarvis)..."
+        ollama pull qwen2.5:7b-instruct
+        echo "Gata."
+    restart: "no"
+    networks:
+      - ai_contabil_network
+
+  # ==========================================
+  #  FRONTEND WEB — React + Vite
+  # ==========================================
+  frontend:
+    build:
+      context: ./frontend-web-aplication/AI-Contabil
+      dockerfile: Dockerfile
+    container_name: ai_contabil_frontend
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend-web-aplication/AI-Contabil:/app
+      - /app/node_modules
+    environment:
+      VITE_API_URL: http://localhost:3777/api/v1/ac
+      VITE_AI_SERVICE_URL: http://localhost:3778/api/v1
+    depends_on:
+      - backend
+    networks:
+      - ai_contabil_network
+
+  # ==========================================
+  #  FRONTEND MOBILE — React Native + Expo
+  # ==========================================
+  mobile:
+    build:
+      context: ./frontend-mobile-aplication
+      dockerfile: Dockerfile
+    container_name: ai_contabil_mobile
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+      - "19000:19000"
+      - "19001:19001"
+      - "19002:19002"
+    volumes:
+      - ./frontend-mobile-aplication:/app
+      - /app/node_modules
+    environment:
+      EXPO_PUBLIC_API_URL: http://localhost:3777/api/v1/ac
+      EXPO_PUBLIC_AI_SERVICE_URL: http://localhost:3778/api/v1
+      # Mod tunnel — accesibil de pe orice retea
+      EXPO_TUNNEL_SUBDOMAIN: ai-contabil
+    depends_on:
+      - backend
+    networks:
+      - ai_contabil_network
+    stdin_open: true
+    tty: true
 
 volumes:
   postgres_data:

@@ -8,7 +8,7 @@ class TestDocumentUpload:
     def test_upload_pdf(self, client, test_user, auth_headers):
         file_content = b"%PDF-1.4 fake pdf content"
         resp = client.post(
-            "/api/documents/upload",
+            "/api/v1/ac/documents/upload",
             headers=auth_headers,
             files={"file": ("test.pdf", io.BytesIO(file_content), "application/pdf")},
             data={"title": "Test Document", "description": "A test doc"},
@@ -22,7 +22,7 @@ class TestDocumentUpload:
     def test_upload_image(self, client, test_user, auth_headers):
         file_content = b"\xff\xd8\xff\xe0 fake jpeg"
         resp = client.post(
-            "/api/documents/upload",
+            "/api/v1/ac/documents/upload",
             headers=auth_headers,
             files={"file": ("photo.jpg", io.BytesIO(file_content), "image/jpeg")},
             data={"title": "Photo Document"},
@@ -31,7 +31,7 @@ class TestDocumentUpload:
 
     def test_upload_invalid_type(self, client, test_user, auth_headers):
         resp = client.post(
-            "/api/documents/upload",
+            "/api/v1/ac/documents/upload",
             headers=auth_headers,
             files={"file": ("malware.exe", io.BytesIO(b"bad"), "application/x-msdownload")},
             data={"title": "Bad File"},
@@ -41,7 +41,7 @@ class TestDocumentUpload:
 
     def test_upload_no_auth(self, client):
         resp = client.post(
-            "/api/documents/upload",
+            "/api/v1/ac/documents/upload",
             files={"file": ("test.pdf", io.BytesIO(b"pdf"), "application/pdf")},
             data={"title": "No Auth"},
         )
@@ -66,14 +66,14 @@ class TestDocumentList:
         self._create_doc(db, test_user.id, "Doc 1")
         self._create_doc(db, test_user.id, "Doc 2")
 
-        resp = client.get("/api/documents/", headers=auth_headers)
+        resp = client.get("/api/v1/ac/documents/", headers=auth_headers)
         assert resp.status_code == 200
         assert resp.json()["total"] == 2
 
     def test_client_cannot_see_others_docs(self, client, db, test_user, test_contabil, auth_headers):
         self._create_doc(db, test_contabil.id, "Contabil Doc")
 
-        resp = client.get("/api/documents/", headers=auth_headers)
+        resp = client.get("/api/v1/ac/documents/", headers=auth_headers)
         assert resp.status_code == 200
         assert resp.json()["total"] == 0
 
@@ -81,7 +81,7 @@ class TestDocumentList:
         self._create_doc(db, test_user.id, "Approved", DocumentStatus.APROBAT)
         self._create_doc(db, test_user.id, "Loaded", DocumentStatus.INCARCAT)
 
-        resp = client.get("/api/documents/?doc_status=aprobat", headers=auth_headers)
+        resp = client.get("/api/v1/ac/documents/?doc_status=aprobat", headers=auth_headers)
         assert resp.status_code == 200
         assert resp.json()["total"] == 1
 
@@ -101,22 +101,22 @@ class TestDocumentOperations:
 
     def test_get_document(self, client, db, test_user, auth_headers):
         doc = self._create_doc(db, test_user.id)
-        resp = client.get(f"/api/documents/{doc.id}", headers=auth_headers)
+        resp = client.get(f"/api/v1/ac/documents/{doc.id}", headers=auth_headers)
         assert resp.status_code == 200
         assert resp.json()["title"] == "Test Doc"
 
     def test_get_nonexistent_document(self, client, test_user, auth_headers):
-        resp = client.get("/api/documents/nonexistent", headers=auth_headers)
+        resp = client.get("/api/v1/ac/documents/nonexistent", headers=auth_headers)
         assert resp.status_code == 404
 
     def test_get_other_users_document_forbidden(self, client, db, test_user, test_contabil, auth_headers):
         doc = self._create_doc(db, test_contabil.id)
-        resp = client.get(f"/api/documents/{doc.id}", headers=auth_headers)
+        resp = client.get(f"/api/v1/ac/documents/{doc.id}", headers=auth_headers)
         assert resp.status_code == 403
 
     def test_update_document(self, client, db, test_user, auth_headers):
         doc = self._create_doc(db, test_user.id)
-        resp = client.put(f"/api/documents/{doc.id}", headers=auth_headers, json={
+        resp = client.put(f"/api/v1/ac/documents/{doc.id}", headers=auth_headers, json={
             "title": "Updated Title",
             "description": "New desc",
         })
@@ -125,5 +125,5 @@ class TestDocumentOperations:
 
     def test_delete_document(self, client, db, test_user, auth_headers):
         doc = self._create_doc(db, test_user.id)
-        resp = client.delete(f"/api/documents/{doc.id}", headers=auth_headers)
+        resp = client.delete(f"/api/v1/ac/documents/{doc.id}", headers=auth_headers)
         assert resp.status_code == 204

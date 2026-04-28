@@ -11,6 +11,7 @@ foloseasca fallback-ul FAQ.
 """
 from __future__ import annotations
 
+import re
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException
@@ -21,6 +22,36 @@ from app.agent.prompt import SYSTEM_PROMPT, build_user_prompt
 from app.agent.ollama_client import genereaza, model_disponibil
 from app.agent.retriever import retriever
 from app.agent.suggestions import sugereaza, lista_toate
+
+
+_BRACKET_REF = re.compile(r"\s*\[(\d+)\]")
+
+
+def _curata_referinte_numerice(text: str, surse: list[dict]) -> str:
+    """
+    Inlocuieste orice marcaj rezidual de tip [1], [2] cu numele real al sursei
+    sau, daca indicele e in afara listei, le elimina cu totul.
+
+    Modelul e instruit sa NU le foloseasca, dar qwen2.5 mai scapa una pe ici-colo.
+    Asta e plasa de siguranta pentru raspunsul afisat in chat.
+    """
+    if not text:
+        return text
+
+    def _inloc(m: re.Match) -> str:
+        idx = int(m.group(1)) - 1
+        if 0 <= idx < len(surse):
+            nume = (surse[idx].get("source") or "").strip()
+            if nume:
+                # Daca textul dinainte se termina cu "conform"/"potrivit" sau ", "
+                # inseram doar numele sursei. Altfel, inseram " (conform <nume>)".
+                anterior = text[max(0, m.start() - 12):m.start()].lower()
+                if any(k in anterior for k in ("conform", "potrivit", "vezi", "in baza")):
+                    return f" {nume}"
+                return f" (conform {nume})"
+        return ""  # indice invalid -> stergem marcajul
+
+    return _BRACKET_REF.sub(_inloc, text).strip()
 
 router = APIRouter(prefix="/agent", tags=["Djarvis Agent"])
 
@@ -121,6 +152,9 @@ async def ask(cerere: CerereIntrebare):
     except Exception as e:
         logger.error(f"Ollama generate failed: {e}")
         raise HTTPException(status_code=502, detail=f"Generare esuata: {e}")
+
+    # Plasa de siguranta — modelul nu trebuie sa scoata [1]/[2] catre user
+    raspuns_text = _curata_referinte_numerice(raspuns_text, context_pt_prompt)
 
     from app.agent.ollama_client import OLLAMA_MODEL
     return RaspunsAgent(

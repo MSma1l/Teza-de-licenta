@@ -1,0 +1,9 @@
+{
+  "include": ["app", "tests", "tools", "scripts"],
+  "exclude": ["**/__pycache__", "**/.venv", "**/node_modules", "model_storage", "training_data"],
+  "reportMissingImports": "none",
+  "reportMissingModuleSource": "none",
+  "reportGeneralTypeIssues": "warning",
+  "pythonVersion": "3.12",
+  "typeCheckingMode": "basic"
+}

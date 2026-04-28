@@ -1,0 +1,9 @@
+{
+  "include": ["app", "tests", "alembic"],
+  "exclude": ["**/__pycache__", "**/.venv", "**/node_modules", "ai-service", "storage", "training-data"],
+  "reportMissingImports": "none",
+  "reportMissingModuleSource": "none",
+  "reportGeneralTypeIssues": "warning",
+  "pythonVersion": "3.12",
+  "typeCheckingMode": "basic"
+}

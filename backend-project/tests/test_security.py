@@ -59,6 +59,6 @@ class TestJWT:
 
 class TestHealthCheck:
     def test_health(self, client):
-        resp = client.get("/api/health")
+        resp = client.get("/api/v1/ac/health")
         assert resp.status_code == 200
         assert resp.json()["status"] == "ok"

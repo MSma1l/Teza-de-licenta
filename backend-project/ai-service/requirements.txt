@@ -1,6 +1,9 @@
-a # === Web Framework ===
+# === Web Framework ===
 fastapi==0.115.6
 uvicorn[standard]==0.34.0
+
+# === HTTP Client (apel Ollama + apeluri inter-service) ===
+httpx==0.28.1
 
 # === Database ===
 sqlalchemy==2.0.36

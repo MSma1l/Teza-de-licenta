@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(docker exec ai_contabil_db psql -U ai_contabil -d ai_contabil_db -c ' *)"
     ]
   }
 }

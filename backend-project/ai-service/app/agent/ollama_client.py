@@ -10,7 +10,7 @@ from loguru import logger
 
 
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://ai_contabil_ollama:11434")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:3b-instruct")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:7b-instruct")
 # generos — raspunsurile pot avea 30+ sec pe CPU
 OLLAMA_TIMEOUT = float(os.getenv("OLLAMA_TIMEOUT", "120"))
 # Tine modelul incarcat 30min intre request-uri → prima intrebare dupa idle nu reincarca de la zero

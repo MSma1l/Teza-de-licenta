@@ -21,7 +21,7 @@ class TestNotifications:
         self._create_notif(db, test_user.id, "Notif 1")
         self._create_notif(db, test_user.id, "Notif 2")
 
-        resp = client.get("/api/notifications/", headers=auth_headers)
+        resp = client.get("/api/v1/ac/notifications/", headers=auth_headers)
         assert resp.status_code == 200
         assert resp.json()["total"] == 2
 
@@ -29,7 +29,7 @@ class TestNotifications:
         self._create_notif(db, test_user.id, "Mine")
         self._create_notif(db, test_contabil.id, "Not mine")
 
-        resp = client.get("/api/notifications/", headers=auth_headers)
+        resp = client.get("/api/v1/ac/notifications/", headers=auth_headers)
         assert resp.status_code == 200
         assert resp.json()["total"] == 1
 
@@ -37,7 +37,7 @@ class TestNotifications:
         notif = self._create_notif(db, test_user.id)
         assert notif.is_read is False
 
-        resp = client.put(f"/api/notifications/{notif.id}/read", headers=auth_headers)
+        resp = client.put(f"/api/v1/ac/notifications/{notif.id}/read", headers=auth_headers)
         assert resp.status_code == 200
         assert resp.json()["is_read"] is True
 
@@ -45,15 +45,15 @@ class TestNotifications:
         self._create_notif(db, test_user.id, "N1")
         self._create_notif(db, test_user.id, "N2")
 
-        resp = client.put("/api/notifications/read-all", headers=auth_headers)
+        resp = client.put("/api/v1/ac/notifications/read-all", headers=auth_headers)
         assert resp.status_code == 200
 
     def test_delete_notification(self, client, db, test_user, auth_headers):
         notif = self._create_notif(db, test_user.id)
-        resp = client.delete(f"/api/notifications/{notif.id}", headers=auth_headers)
+        resp = client.delete(f"/api/v1/ac/notifications/{notif.id}", headers=auth_headers)
         assert resp.status_code == 204
 
     def test_delete_other_user_notification_404(self, client, db, test_user, test_contabil, auth_headers):
         notif = self._create_notif(db, test_contabil.id)
-        resp = client.delete(f"/api/notifications/{notif.id}", headers=auth_headers)
+        resp = client.delete(f"/api/v1/ac/notifications/{notif.id}", headers=auth_headers)
         assert resp.status_code == 404

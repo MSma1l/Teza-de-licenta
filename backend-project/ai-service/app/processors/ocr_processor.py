@@ -51,15 +51,19 @@ class OCRProcessor:
                 self._api_version = "v3"
                 logger.info(f"PaddleOCR v{version} engine incarcat (predict API)")
             else:
-                # PaddleOCR v2.x API
+                # PaddleOCR v2.x API — GPU activ daca paddlepaddle-gpu e instalat,
+                # altfel paddle face fallback automat la CPU.
+                use_gpu = os.getenv("PADDLE_USE_GPU", "1") == "1"
                 self._ocr_engine = PaddleOCR(
                     lang="en",
                     use_angle_cls=settings.OCR_USE_ANGLE_CLS,
                     show_log=False,
-                    use_gpu=False,
+                    use_gpu=use_gpu,
                 )
                 self._api_version = "v2"
-                logger.info(f"PaddleOCR v{version} engine incarcat (ocr API)")
+                logger.info(
+                    f"PaddleOCR v{version} engine incarcat (ocr API) — gpu={use_gpu}"
+                )
 
         return self._ocr_engine
 

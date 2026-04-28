@@ -3,12 +3,12 @@
 
 class TestProfile:
     def test_get_profile(self, client, test_user, auth_headers):
-        resp = client.get("/api/users/me", headers=auth_headers)
+        resp = client.get("/api/v1/ac/users/me", headers=auth_headers)
         assert resp.status_code == 200
         assert resp.json()["username"] == "testuser"
 
     def test_update_profile(self, client, test_user, auth_headers):
-        resp = client.put("/api/users/me", headers=auth_headers, json={
+        resp = client.put("/api/v1/ac/users/me", headers=auth_headers, json={
             "full_name": "Updated Name",
             "phone": "+37360000000",
         })
@@ -17,7 +17,7 @@ class TestProfile:
         assert resp.json()["phone"] == "+37360000000"
 
     def test_update_email_unique(self, client, test_user, test_contabil, auth_headers):
-        resp = client.put("/api/users/me", headers=auth_headers, json={
+        resp = client.put("/api/v1/ac/users/me", headers=auth_headers, json={
             "email": "contabil@example.com",
         })
         assert resp.status_code == 400
@@ -26,7 +26,7 @@ class TestProfile:
 
 class TestChangePassword:
     def test_change_password_success(self, client, test_user, auth_headers):
-        resp = client.post("/api/users/me/change-password", headers=auth_headers, json={
+        resp = client.post("/api/v1/ac/users/me/change-password", headers=auth_headers, json={
             "current_password": "password123",
             "new_password": "newpassword456",
             "confirm_password": "newpassword456",
@@ -34,14 +34,14 @@ class TestChangePassword:
         assert resp.status_code == 200
 
         # Verificare login cu noua parolă
-        login_resp = client.post("/api/auth/login", json={
+        login_resp = client.post("/api/v1/ac/auth/login", json={
             "username": "testuser",
             "password": "newpassword456",
         })
         assert login_resp.status_code == 200
 
     def test_change_password_wrong_current(self, client, test_user, auth_headers):
-        resp = client.post("/api/users/me/change-password", headers=auth_headers, json={
+        resp = client.post("/api/v1/ac/users/me/change-password", headers=auth_headers, json={
             "current_password": "wrong",
             "new_password": "newpassword456",
             "confirm_password": "newpassword456",
@@ -49,7 +49,7 @@ class TestChangePassword:
         assert resp.status_code == 400
 
     def test_change_password_mismatch(self, client, test_user, auth_headers):
-        resp = client.post("/api/users/me/change-password", headers=auth_headers, json={
+        resp = client.post("/api/v1/ac/users/me/change-password", headers=auth_headers, json={
             "current_password": "password123",
             "new_password": "newpassword456",
             "confirm_password": "different789",
@@ -57,7 +57,7 @@ class TestChangePassword:
         assert resp.status_code == 400
 
     def test_change_password_too_short(self, client, test_user, auth_headers):
-        resp = client.post("/api/users/me/change-password", headers=auth_headers, json={
+        resp = client.post("/api/v1/ac/users/me/change-password", headers=auth_headers, json={
             "current_password": "password123",
             "new_password": "12345",
             "confirm_password": "12345",
@@ -67,28 +67,28 @@ class TestChangePassword:
 
 class TestAdminRoutes:
     def test_list_users_as_admin(self, client, test_admin, admin_headers):
-        resp = client.get("/api/users/", headers=admin_headers)
+        resp = client.get("/api/v1/ac/users/", headers=admin_headers)
         assert resp.status_code == 200
         assert resp.json()["total"] >= 1
 
     def test_list_users_as_client_forbidden(self, client, test_user, auth_headers):
-        resp = client.get("/api/users/", headers=auth_headers)
+        resp = client.get("/api/v1/ac/users/", headers=auth_headers)
         assert resp.status_code == 403
 
     def test_get_user_by_id(self, client, test_user, test_admin, admin_headers):
-        resp = client.get(f"/api/users/{test_user.id}", headers=admin_headers)
+        resp = client.get(f"/api/v1/ac/users/{test_user.id}", headers=admin_headers)
         assert resp.status_code == 200
         assert resp.json()["username"] == "testuser"
 
     def test_get_nonexistent_user(self, client, test_admin, admin_headers):
-        resp = client.get("/api/users/nonexistent-id", headers=admin_headers)
+        resp = client.get("/api/v1/ac/users/nonexistent-id", headers=admin_headers)
         assert resp.status_code == 404
 
 
 class TestAccountantClients:
     def test_assign_client(self, client, db, test_user, test_contabil, contabil_headers):
         resp = client.post(
-            "/api/users/assign-client",
+            "/api/v1/ac/users/assign-client",
             headers=contabil_headers,
             params={"client_id": test_user.id},
         )
@@ -103,7 +103,7 @@ class TestAccountantClients:
         db.add(link)
         db.commit()
 
-        resp = client.get("/api/users/my-clients", headers=contabil_headers)
+        resp = client.get("/api/v1/ac/users/my-clients", headers=contabil_headers)
         assert resp.status_code == 200
         assert resp.json()["total"] == 1
         assert resp.json()["users"][0]["username"] == "testuser"
