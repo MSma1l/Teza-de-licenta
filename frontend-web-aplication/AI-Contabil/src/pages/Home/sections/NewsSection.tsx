@@ -1,6 +1,4 @@
 import { useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import { useLanguage } from '../../../context/LanguageContext';
 import type { Lang } from '../../../context/LanguageContext';
@@ -157,7 +155,6 @@ const t: Record<Lang, {
 
 const NewsSection = () => {
   const { lang } = useLanguage();
-  const navigate = useNavigate();
   const tr = t[lang];
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -197,12 +194,6 @@ const NewsSection = () => {
             {tr.subtitle}
           </p>
         </div>
-        <button
-          className="btn-gradient px-6 py-2.5 rounded-full text-sm font-bold max-md:hidden"
-          onClick={() => navigate('/news')}
-        >
-          {tr.allNews} <ArrowForwardIcon style={{ fontSize: 16, marginLeft: 4 }} />
-        </button>
       </div>
 
       {/* Scrollable news carousel */}
@@ -213,8 +204,7 @@ const NewsSection = () => {
         {tr.items.map((item, index) => (
           <article
             key={index}
-            className="flex-[0_0_320px] max-md:flex-[0_0_85%] snap-start flex flex-col rounded-2xl border border-neutral-200 bg-white overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-xl group cursor-pointer"
-            onClick={() => navigate('/news')}
+            className="flex-[0_0_320px] max-md:flex-[0_0_85%] snap-start flex flex-col rounded-2xl border border-neutral-200 bg-white overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-xl group"
           >
             {/* Color top accent */}
             <div className="h-1.5" style={{ background: `linear-gradient(90deg, ${item.color}, ${item.color}66)` }} />
@@ -244,23 +234,10 @@ const NewsSection = () => {
                   <CalendarTodayIcon style={{ fontSize: 13 }} />
                   {item.date}
                 </span>
-                <span className="text-sm font-semibold text-[#4f46e5] opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center gap-1">
-                  {tr.readMore} <ArrowForwardIcon style={{ fontSize: 14 }} />
-                </span>
               </div>
             </div>
           </article>
         ))}
-      </div>
-
-      {/* Mobile button */}
-      <div className="hidden max-md:flex justify-center mt-6">
-        <button
-          className="btn-gradient px-6 py-2.5 rounded-full text-sm font-bold"
-          onClick={() => navigate('/news')}
-        >
-          {tr.allNews} <ArrowForwardIcon style={{ fontSize: 16, marginLeft: 4 }} />
-        </button>
       </div>
     </section>
   );

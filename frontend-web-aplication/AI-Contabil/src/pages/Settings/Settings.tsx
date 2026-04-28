@@ -15,7 +15,8 @@
    Navigarea între secțiuni se face prin sidebar.
    ============================================ */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 /* Importăm componentele */
 import Navbar from '../../components/Navbar/Navbar';
@@ -30,10 +31,43 @@ import HelpFaq from './sections/HelpFaq';
 /* Importăm tipurile */
 import type { SettingsSection } from '../../models/settingsTypes';
 
+/* Maparea aliasilor URL (ce trimit alte componente) -> SettingsSection real.
+   Acceptam si plurale ca "notifications" pentru ca url-urile sa fie naturale. */
+const TAB_ALIAS: Record<string, SettingsSection> = {
+  'edit-profile': 'edit-profile',
+  profile: 'edit-profile',
+  notification: 'notification',
+  notifications: 'notification',
+  security: 'security',
+  help: 'help',
+  faq: 'help',
+};
+
+function rezolvaSectiune(raw: string | null): SettingsSection {
+  if (!raw) return 'edit-profile';
+  return TAB_ALIAS[raw.toLowerCase()] ?? 'edit-profile';
+}
+
 /* --- Componenta Settings --- */
 const Settings = () => {
-  /* State pentru secțiunea activă din sidebar */
-  const [activeSection, setActiveSection] = useState<SettingsSection>('edit-profile');
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  /* State pentru secțiunea activă din sidebar — initializat din ?tab= */
+  const [activeSection, setActiveSection] = useState<SettingsSection>(
+    rezolvaSectiune(searchParams.get('tab')),
+  );
+
+  /* Re-sincronizam cand URL-ul se schimba (ex: utilizatorul navigheaza prin Navbar) */
+  useEffect(() => {
+    const noua = rezolvaSectiune(searchParams.get('tab'));
+    setActiveSection((prev) => (prev === noua ? prev : noua));
+  }, [searchParams]);
+
+  /* Cand userul schimba tab-ul din sidebar, actualizam si URL-ul (fara reload) */
+  const handleSectionChange = (s: SettingsSection) => {
+    setActiveSection(s);
+    setSearchParams({ tab: s }, { replace: true });
+  };
 
   /* Funcția care returnează componenta corespunzătoare secțiunii active */
   const renderSection = () => {
@@ -61,7 +95,7 @@ const Settings = () => {
         {/* Sidebar-ul din stânga */}
         <SettingsSidebar
           activeSection={activeSection}
-          onSectionChange={setActiveSection}
+          onSectionChange={handleSectionChange}
         />
 
         {/* Secțiunea activă din dreapta */}

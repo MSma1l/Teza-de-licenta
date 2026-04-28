@@ -9,6 +9,8 @@ import AssessmentIcon from '@mui/icons-material/Assessment';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import CloseIcon from '@mui/icons-material/Close';
+import InboxIcon from '@mui/icons-material/Inbox';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -29,9 +31,12 @@ const t = {
     contact: 'CONTACT',
     login: 'LOGARE',
     docs: 'Documente',
+    queue: 'Coada documente',
     reports: 'Rapoarte',
     training: 'Antrenare AI',
-    settings: 'Setari',
+    admin: 'Panou administrator',
+    notifications: 'Notificari',
+    settings: 'Profil',
     logout: 'Deconectare',
   },
   en: {
@@ -42,9 +47,12 @@ const t = {
     contact: 'CONTACT',
     login: 'LOGIN',
     docs: 'Documents',
+    queue: 'Document queue',
     reports: 'Reports',
     training: 'AI Training',
-    settings: 'Settings',
+    admin: 'Admin panel',
+    notifications: 'Notifications',
+    settings: 'Profile',
     logout: 'Logout',
   },
   ru: {
@@ -55,9 +63,12 @@ const t = {
     contact: 'КОНТАКТ',
     login: 'ВХОД',
     docs: 'Документы',
+    queue: 'Очередь документов',
     reports: 'Отчёты',
     training: 'Обучение ИИ',
-    settings: 'Настройки',
+    admin: 'Админ панель',
+    notifications: 'Уведомления',
+    settings: 'Профиль',
     logout: 'Выход',
   },
 };
@@ -70,14 +81,19 @@ interface NavbarProps {
 const Navbar = ({ isLoggedIn = false, showNavLinks = true }: NavbarProps) => {
   const navigate = useNavigate();
   const { logout, user } = useAuth();
-  const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
+
+  // Comparare case-insensitive a rolului. In DB rolurile sunt UPPERCASE (CLIENT/CONTABIL/ADMIN).
+  const role = (user?.role || '').toLowerCase();
+  const isContabil = role === 'contabil';
+  const isAdmin = role === 'admin' || role === 'super_admin';
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const { lang, setLang } = useLanguage();
   const tr = t[lang];
 
-
   const navLinkClass = "nav-link-hover text-base font-bold uppercase tracking-wide text-neutral-600 cursor-pointer relative py-1";
+  const iconBtnClass = "nav-icon-hover w-10 h-10 flex items-center justify-center cursor-pointer text-neutral-600 rounded-lg";
 
   const handleLogout = () => {
     logout();
@@ -95,7 +111,7 @@ const Navbar = ({ isLoggedIn = false, showNavLinks = true }: NavbarProps) => {
           AI-CONTABIL
         </div>
 
-        {/* Desktop nav links */}
+        {/* Desktop nav links — doar pe pagina publica */}
         {showNavLinks && (
           <div className="flex items-center gap-8 max-md:hidden">
             <a href="#about" className={navLinkClass}>{tr.about}</a>
@@ -106,41 +122,73 @@ const Navbar = ({ isLoggedIn = false, showNavLinks = true }: NavbarProps) => {
           </div>
         )}
 
-        {/* Desktop right section */}
+        {/* Desktop right — iconite pe rol */}
         <div className="flex items-center gap-3 max-md:hidden">
-
           {isLoggedIn ? (
             <>
+              {/* TOTI: Documente */}
               <div
-                className="nav-icon-hover w-10 h-10 flex items-center justify-center cursor-pointer text-neutral-600 rounded-lg"
+                className={iconBtnClass}
                 onClick={() => navigate('/documents')}
                 title={tr.docs}
               >
                 <DescriptionIcon />
               </div>
-              <div
-                className="nav-icon-hover w-10 h-10 flex items-center justify-center cursor-pointer text-neutral-600 rounded-lg"
-                onClick={() => navigate('/reports')}
-                title={tr.reports}
-              >
-                <AssessmentIcon />
-              </div>
+
+              {/* CONTABIL + ADMIN: Coada documente */}
+              {(isContabil || isAdmin) && (
+                <div
+                  className={iconBtnClass}
+                  onClick={() => navigate('/contabil')}
+                  title={tr.queue}
+                >
+                  <InboxIcon />
+                </div>
+              )}
+
+              {/* CONTABIL + ADMIN: Rapoarte fiscale */}
+              {(isContabil || isAdmin) && (
+                <div
+                  className={iconBtnClass}
+                  onClick={() => navigate('/reports')}
+                  title={tr.reports}
+                >
+                  <AssessmentIcon />
+                </div>
+              )}
+
+              {/* ADMIN: Antrenare modele */}
               {isAdmin && (
                 <div
-                  className="nav-icon-hover w-10 h-10 flex items-center justify-center cursor-pointer text-neutral-600 rounded-lg"
+                  className={iconBtnClass}
                   onClick={() => navigate('/training')}
                   title={tr.training}
                 >
                   <SchoolIcon />
                 </div>
               )}
+
+              {/* ADMIN: Panou admin */}
+              {isAdmin && (
+                <div
+                  className={iconBtnClass}
+                  onClick={() => navigate('/admin')}
+                  title={tr.admin}
+                >
+                  <AdminPanelSettingsIcon />
+                </div>
+              )}
+
+              {/* TOTI: Notificari */}
               <div
-                className="nav-icon-hover w-10 h-10 flex items-center justify-center cursor-pointer text-neutral-600 rounded-lg"
-                onClick={() => navigate('/settings')}
-                title={tr.settings}
+                className={iconBtnClass}
+                onClick={() => navigate('/settings?tab=notifications')}
+                title={tr.notifications}
               >
                 <NotificationsNoneIcon />
               </div>
+
+              {/* TOTI: Profil */}
               <div
                 className="w-9 h-9 rounded-full bg-neutral-300 flex items-center justify-center cursor-pointer overflow-hidden border-2 border-neutral-200 hover:border-primary transition-all duration-300 hover:scale-110 [&_svg]:text-neutral-500"
                 onClick={() => navigate('/settings')}
@@ -148,6 +196,8 @@ const Navbar = ({ isLoggedIn = false, showNavLinks = true }: NavbarProps) => {
               >
                 <PersonOutlineIcon fontSize="small" />
               </div>
+
+              {/* TOTI: Logout */}
               <button
                 onClick={handleLogout}
                 className="w-10 h-10 flex items-center justify-center cursor-pointer text-neutral-400 hover:text-red-500 transition-all duration-300 hover:scale-110 rounded-lg"
@@ -163,7 +213,7 @@ const Navbar = ({ isLoggedIn = false, showNavLinks = true }: NavbarProps) => {
           )}
         </div>
 
-        {/* Mobile hamburger button */}
+        {/* Mobile hamburger */}
         <button
           className="hidden max-md:flex w-10 h-10 items-center justify-center text-neutral-600 cursor-pointer"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -174,35 +224,46 @@ const Navbar = ({ isLoggedIn = false, showNavLinks = true }: NavbarProps) => {
         {/* Mobile menu overlay */}
         {mobileMenuOpen && (
           <div className="hidden max-md:flex fixed inset-0 top-[65px] bg-white z-[999] flex-col p-6 gap-2 animate-fade-in">
-            {/* Mobile language selector */}
-              <div className="flex gap-2 mb-4">
-                {langOptions.map((opt) => (
-                  <button
-                    key={opt.key}
-                    onClick={() => setLang(opt.key)}
-                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-medium cursor-pointer transition-all duration-200 ${
-                      lang === opt.key
-                        ? 'btn-gradient'
-                        : 'bg-neutral-100 text-neutral-600'
-                    }`}
-                  >
-                    <span>{opt.flag}</span>
-                    <span>{opt.label}</span>
-                  </button>
-                ))}
-              </div>
+            <div className="flex gap-2 mb-4">
+              {langOptions.map((opt) => (
+                <button
+                  key={opt.key}
+                  onClick={() => setLang(opt.key)}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-medium cursor-pointer transition-all duration-200 ${
+                    lang === opt.key ? 'btn-gradient' : 'bg-neutral-100 text-neutral-600'
+                  }`}
+                >
+                  <span>{opt.flag}</span>
+                  <span>{opt.label}</span>
+                </button>
+              ))}
+            </div>
 
             {isLoggedIn ? (
               <>
                 <button onClick={() => { navigate('/documents'); setMobileMenuOpen(false); }} className="flex items-center gap-3 py-3 px-4 rounded-lg hover:bg-neutral-100 text-neutral-600 text-left cursor-pointer">
                   <DescriptionIcon /> {tr.docs}
                 </button>
-                <button onClick={() => { navigate('/reports'); setMobileMenuOpen(false); }} className="flex items-center gap-3 py-3 px-4 rounded-lg hover:bg-neutral-100 text-neutral-600 text-left cursor-pointer">
-                  <AssessmentIcon /> {tr.reports}
-                </button>
-                <button onClick={() => { navigate('/training'); setMobileMenuOpen(false); }} className="flex items-center gap-3 py-3 px-4 rounded-lg hover:bg-neutral-100 text-neutral-600 text-left cursor-pointer">
-                  <SchoolIcon /> {tr.training}
-                </button>
+                {(isContabil || isAdmin) && (
+                  <button onClick={() => { navigate('/contabil'); setMobileMenuOpen(false); }} className="flex items-center gap-3 py-3 px-4 rounded-lg hover:bg-neutral-100 text-neutral-600 text-left cursor-pointer">
+                    <InboxIcon /> {tr.queue}
+                  </button>
+                )}
+                {(isContabil || isAdmin) && (
+                  <button onClick={() => { navigate('/reports'); setMobileMenuOpen(false); }} className="flex items-center gap-3 py-3 px-4 rounded-lg hover:bg-neutral-100 text-neutral-600 text-left cursor-pointer">
+                    <AssessmentIcon /> {tr.reports}
+                  </button>
+                )}
+                {isAdmin && (
+                  <button onClick={() => { navigate('/training'); setMobileMenuOpen(false); }} className="flex items-center gap-3 py-3 px-4 rounded-lg hover:bg-neutral-100 text-neutral-600 text-left cursor-pointer">
+                    <SchoolIcon /> {tr.training}
+                  </button>
+                )}
+                {isAdmin && (
+                  <button onClick={() => { navigate('/admin'); setMobileMenuOpen(false); }} className="flex items-center gap-3 py-3 px-4 rounded-lg hover:bg-neutral-100 text-neutral-600 text-left cursor-pointer">
+                    <AdminPanelSettingsIcon /> {tr.admin}
+                  </button>
+                )}
                 <button onClick={() => { navigate('/settings'); setMobileMenuOpen(false); }} className="flex items-center gap-3 py-3 px-4 rounded-lg hover:bg-neutral-100 text-neutral-600 text-left cursor-pointer">
                   <PersonOutlineIcon /> {tr.settings}
                 </button>
@@ -224,3 +285,6 @@ const Navbar = ({ isLoggedIn = false, showNavLinks = true }: NavbarProps) => {
 };
 
 export default Navbar;
+
+// Marca: client = 1 iconita (Documente). contabil = +Coada +Rapoarte. admin = +Antrenare +AdminPanel.
+// Pentru ca rolurile in DB sunt UPPERCASE (CLIENT/CONTABIL/ADMIN), comparam mereu cu .toLowerCase().

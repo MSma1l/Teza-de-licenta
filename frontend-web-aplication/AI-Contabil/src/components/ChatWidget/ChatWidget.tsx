@@ -59,6 +59,7 @@ const ChatWidget = () => {
   const [sending, setSending] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -116,7 +117,12 @@ const ChatWidget = () => {
       }]);
 
       // Dupa raspuns, refresh suggestions cu context (intrebari relate)
-      fetchSuggestions(text).then(setSuggestions).catch(() => setSuggestions([]));
+      fetchSuggestions(text)
+        .then((s) => {
+          setSuggestions(s);
+          setShowSuggestions(true);
+        })
+        .catch(() => setSuggestions([]));
     } catch {
       setMessages((prev) => [...prev, {
         id: `error-${Date.now()}`,
@@ -218,45 +224,67 @@ const ChatWidget = () => {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Suggested questions (chips) */}
+          {/* Suggested questions (chips) — collapsable so they never block free input */}
           {!sending && suggestions.length > 0 && (
-            <div className="px-4 pt-2 pb-1 bg-white border-t border-neutral-200 flex-shrink-0">
-              <div className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide mb-1.5">
-                Intrebari sugerate
+            <div className="px-4 pt-2 pb-1 bg-white border-t border-neutral-200 flex-shrink-0 max-h-[110px] overflow-y-auto">
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide">
+                  Intrebari sugerate
+                </div>
+                <button
+                  onClick={() => setShowSuggestions((v) => !v)}
+                  className="text-[10px] text-neutral-500 hover:text-[#4f46e5] cursor-pointer"
+                  type="button"
+                >
+                  {showSuggestions ? 'Ascunde' : 'Arata'}
+                </button>
               </div>
-              <div className="flex flex-wrap gap-1.5">
-                {suggestions.slice(0, 5).map((s, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => handleSend(s.q)}
-                    className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors ${_catBadge(s.cat)}`}
-                    title={`Categorie: ${s.cat}`}
-                  >
-                    {s.q}
-                  </button>
-                ))}
-              </div>
+              {showSuggestions && (
+                <div className="flex flex-wrap gap-1.5 pb-1">
+                  {suggestions.slice(0, 5).map((s, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleSend(s.q)}
+                      className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors ${_catBadge(s.cat)}`}
+                      title={`Categorie: ${s.cat}`}
+                    >
+                      {s.q}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
-          {/* Input */}
+          {/* Input — mereu vizibil, indiferent de chip-urile de sugestii */}
           <div className="flex items-center gap-2 px-4 py-3 border-t border-neutral-200 bg-white flex-shrink-0">
             <input
               ref={inputRef}
               type="text"
               value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+              onChange={(e) => {
+                setInput(e.target.value);
+                if (e.target.value.length > 0) setShowSuggestions(false);
+              }}
+              onFocus={() => setShowSuggestions(false)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
               placeholder={tr.placeholder}
               maxLength={2000}
               className="flex-1 text-sm bg-neutral-50 border border-neutral-200 rounded-full px-4 py-2.5 focus:outline-none focus:border-[#4f46e5] transition-colors"
-              disabled={sending}
+              autoFocus
             />
             <button
-              onClick={handleSend}
+              type="button"
+              onClick={() => handleSend()}
               disabled={!input.trim() || sending}
               className="w-10 h-10 rounded-full flex items-center justify-center cursor-pointer transition-all duration-200 disabled:opacity-40 disabled:cursor-default"
               style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #0ea5e9 100%)' }}
+              title="Trimite mesaj"
             >
               <SendIcon style={{ color: '#fff', fontSize: 18 }} />
             </button>
