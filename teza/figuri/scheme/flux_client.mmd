@@ -1,0 +1,40 @@
+flowchart TD
+    Start(["Acces platforma"]) --> A{"Are cont?"}
+    A -- "Nu" --> Reg["Inregistrare<br/>POST /auth/register"]
+    A -- "Da" --> Log["Logare<br/>POST /auth/login"]
+    Reg --> Log
+    Log --> TFA{"2FA activ?"}
+    TFA -- "Da" --> TFAFlow["Confirma 2FA pe mobile<br/>POST /2fa/verify"]
+    TFA -- "Nu" --> Hub
+    TFAFlow --> Hub(["Hub principal"])
+
+    Hub --> AC["Alege contabil<br/>POST /users/choose-accountant"]
+    Hub --> Up["Trimite document"]
+    Hub --> Chat["Discuta cu Djarvis"]
+    Hub --> Vezi["Vezi notificari<br/>GET /notifications/"]
+
+    Up --> Mod{"Web sau mobile?"}
+    Mod -- "Web" --> UpW["Upload PDF/imagine<br/>POST /documents/upload"]
+    Mod -- "Mobile" --> UpM["Scaneaza camera / poza /<br/>galerie / PDF"]
+    UpW --> OCR["OCR + clasificare AI<br/>(PaddleOCR + BERT)"]
+    UpM --> OCR
+    OCR --> Notif(["Notificare cand<br/>contabilul aproba"])
+
+    Chat --> Faq{"FAQ match >= 0.97?"}
+    Faq -- "Da" --> FaqAns(["Raspuns instant FAQ"])
+    Faq -- "Nu" --> Djarvis["Djarvis RAG<br/>qwen2.5:7b + legislatie RM"]
+    Djarvis --> DjOk{"Djarvis a raspuns?"}
+    DjOk -- "Da" --> DjAns(["Raspuns cu citare lege"])
+    DjOk -- "Nu" --> Esc["Escaladeaza la contabil"]
+    Esc --> AsteptC(["Asteapta raspuns contabil"])
+
+    classDef start fill:#dbeafe,stroke:#2563eb,color:#1e40af,stroke-width:3px
+    classDef action fill:#dcfce7,stroke:#16a34a,color:#166534
+    classDef decision fill:#fef3c7,stroke:#d97706,color:#92400e
+    classDef ai fill:#ede9fe,stroke:#7c3aed,color:#5b21b6
+    classDef hub fill:#cffafe,stroke:#0891b2,color:#155e75,stroke-width:3px
+
+    class Start,Hub,FaqAns,DjAns,Notif,AsteptC start
+    class Reg,Log,TFAFlow,AC,Up,Chat,Vezi,UpW,UpM,Esc action
+    class A,TFA,Mod,Faq,DjOk decision
+    class OCR,Djarvis ai

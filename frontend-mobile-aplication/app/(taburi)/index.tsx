@@ -19,7 +19,7 @@ import { obtineConversatii, type ConversatieChat } from '@/lib/api/serviciu-chat
 import { OpenOnWeb } from '@/components/open-on-web';
 import { AlegeContabil } from '@/components/alege-contabil';
 import { ChatDjarvis } from '@/components/chat-djarvis';
-import { stiluri } from './styles-acasa';
+import { stiluri } from '@/lib/styles/acasa';
 
 function formateazaData(dataIso: string): string {
   const data = new Date(dataIso);

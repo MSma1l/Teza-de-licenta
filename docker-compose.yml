@@ -99,9 +99,11 @@ services:
       CELERY_RESULT_BACKEND: redis://redis:6379/1
       LOG_LEVEL: INFO
       OLLAMA_URL: http://ollama:11434
-      # 7B pe GPU = raspunsuri mult mai bune in romana, latenta similara cu 3B pe CPU
-      OLLAMA_MODEL: qwen2.5:7b-instruct
-      OLLAMA_TIMEOUT: "120"
+      # 3B incape complet pe RTX 3050 4GB (2 GB VRAM) → all-GPU, ~30 tok/s, cold-load <10s.
+      # 7B Q4 nu incape (5+ GB VRAM necesar) si Ollama il sparge GPU/CPU → cold-load 138s
+      # si 3 tok/s — adica timeout pe primul request si latenta proasta pe restul.
+      OLLAMA_MODEL: qwen2.5:3b-instruct
+      OLLAMA_TIMEOUT: "240"
       OLLAMA_KEEP_ALIVE: "30m"
       LEGISLATIE_INDEX_DIR: /app/model_storage/legislatie_index
       EMBEDDER_MODEL: sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
@@ -186,9 +188,8 @@ services:
     volumes:
       - ollama_models:/root/.ollama
     environment:
-      # Forteaza Ollama sa preia toate layerele LLM-ului pe GPU.
-      # Daca placa nu are destul VRAM, scade automat layer-by-layer.
-      OLLAMA_NUM_GPU: "999"
+      # Lasam Ollama sa decida cate layere pune pe GPU (RTX 3050 4GB).
+      # Pentru qwen2.5:3b Q4 → toate layerele incap pe GPU (~2 GB VRAM).
       OLLAMA_KEEP_ALIVE: "30m"
       OLLAMA_FLASH_ATTENTION: "1"
     networks:
@@ -219,8 +220,8 @@ services:
       - |
         echo "Astept Ollama..."
         until ollama list >/dev/null 2>&1; do sleep 2; done
-        echo "Pull qwen2.5:7b-instruct (Djarvis)..."
-        ollama pull qwen2.5:7b-instruct
+        echo "Pull qwen2.5:3b-instruct (Djarvis)..."
+        ollama pull qwen2.5:3b-instruct
         echo "Gata."
     restart: "no"
     networks:
@@ -266,10 +267,15 @@ services:
       - ./frontend-mobile-aplication:/app
       - /app/node_modules
     environment:
-      EXPO_PUBLIC_API_URL: http://localhost:3777/api/v1/ac
-      EXPO_PUBLIC_AI_SERVICE_URL: http://localhost:3778/api/v1
-      # Mod tunnel — accesibil de pe orice retea
-      EXPO_TUNNEL_SUBDOMAIN: ai-contabil
+      # IMPORTANT: pe ${LAN_IP} trebuie sa raspunda backend-ul, nu localhost.
+      # Telefonul nu vede "localhost" al laptopului — trebuie IP-ul WiFi al PC-ului.
+      EXPO_PUBLIC_API_URL: http://${LAN_IP:-localhost}:3777/api/v1/ac
+      EXPO_PUBLIC_AI_SERVICE_URL: http://${LAN_IP:-localhost}:3778/api/v1
+      # Hostname pe care Expo Metro il anunta in QR code — TREBUIE sa fie IP-ul
+      # WiFi al laptopului tau (ex: 192.168.1.20). Pune-l in .env: LAN_IP=192.168.x.y
+      REACT_NATIVE_PACKAGER_HOSTNAME: ${LAN_IP:-}
+      # Mod implicit: lan. Pune EXPO_DEV_MODE=tunnel daca telefonul e pe alta retea.
+      EXPO_DEV_MODE: ${EXPO_DEV_MODE:-lan}
     depends_on:
       - backend
     networks:

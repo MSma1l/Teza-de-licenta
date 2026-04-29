@@ -1,0 +1,48 @@
+flowchart TD
+    Start(["Logare contabil<br/>POST /auth/login"]) --> TFA["Confirma 2FA<br/>POST /2fa/verify"]
+    TFA --> Dash(["Dashboard contabil<br/>GET /users/my-clients"])
+
+    Dash --> Coada["Coada documente<br/>GET /documents/queue"]
+    Dash --> Esc["Conversatii escalate<br/>GET /chat/escalated"]
+    Dash --> Rap["Generare rapoarte SFS"]
+    Dash --> Cli["Gestiune clienti"]
+
+    Coada --> VezDoc["Deschide document<br/>GET /documents/{id}/fields"]
+    VezDoc --> Rec["Recomandari AI<br/>GET /documents/{id}/recommendations"]
+    Rec --> Decizie{"Date OCR corecte?"}
+    Decizie -- "Da" --> Aprob["Aproba<br/>POST /documents/{id}/approve"]
+    Decizie -- "Aproape" --> Cor["Corecteaza campuri<br/>POST /documents/{id}/correct"]
+    Decizie -- "Nu" --> Resp["Respinge<br/>POST /documents/{id}/reject"]
+    Cor --> Aprob
+    Aprob --> NotifC(["Notificare la client"])
+    Resp --> NotifC
+
+    Esc --> RaspC["Scrie raspuns profesional<br/>POST /chat/respond/{id}"]
+    RaspC --> FaqAuto["Salvat in FAQ<br/>(Djarvis invata)"]
+    FaqAuto --> NotifC
+
+    Rap --> AlegRap{"Tip raport?"}
+    AlegRap -- "IPC21" --> R1["POST /reports/sfs/generate/ipc21"]
+    AlegRap -- "2-INV" --> R2["POST /reports/sfs/generate/2inv"]
+    AlegRap -- "TL13" --> R3["POST /reports/sfs/generate/tl13"]
+    AlegRap -- "IRM19" --> R4["POST /reports/sfs/generate/irm19"]
+    AlegRap -- "SIMM24" --> R5["POST /reports/sfs/generate/simm24"]
+    R1 --> PDF(["PDF gata pentru SFS"])
+    R2 --> PDF
+    R3 --> PDF
+    R4 --> PDF
+    R5 --> PDF
+
+    Cli --> AdaC["Asigneaza client<br/>POST /users/assign-client"]
+    Cli --> ListC["Vezi clientii mei<br/>GET /users/my-clients"]
+
+    classDef start fill:#dbeafe,stroke:#2563eb,color:#1e40af,stroke-width:3px
+    classDef action fill:#fed7aa,stroke:#ea580c,color:#9a3412
+    classDef decision fill:#fef3c7,stroke:#d97706,color:#92400e
+    classDef ai fill:#ede9fe,stroke:#7c3aed,color:#5b21b6
+    classDef hub fill:#cffafe,stroke:#0891b2,color:#155e75,stroke-width:3px
+
+    class Start,Dash,NotifC,PDF hub
+    class TFA,Coada,Esc,Rap,Cli,VezDoc,Aprob,Cor,Resp,RaspC,AdaC,ListC,R1,R2,R3,R4,R5 action
+    class Decizie,AlegRap decision
+    class Rec,FaqAuto ai

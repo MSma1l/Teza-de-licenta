@@ -1,0 +1,48 @@
+flowchart TD
+    Start(["Logare admin<br/>POST /auth/login"]) --> TFA["Confirma 2FA obligatoriu<br/>POST /2fa/verify"]
+    TFA --> Panou(["Panou administrator"])
+
+    Panou --> User["Gestiune utilizatori"]
+    Panou --> Train["Antrenare AI"]
+    Panou --> Audit["Audit & monitorizare"]
+    Panou --> Mod["Gestiune modele AI"]
+
+    User --> UAct{"Actiune?"}
+    UAct -- "Creeaza contabil" --> CC["POST /users/create-contabil"]
+    UAct -- "Schimba rol" --> SR["PATCH /users/{id}/role"]
+    UAct -- "Asigneaza client" --> AC["POST /users/admin/assign-client"]
+    CC --> Notif(["Notificare la utilizator"])
+    SR --> Notif
+    AC --> Notif
+
+    Train --> Stat["Statistici antrenare<br/>GET /training/stats"]
+    Stat --> Doc["Documente confidence scazut<br/>GET /training/documents"]
+    Doc --> Decide{"Eticheta corecta?"}
+    Decide -- "Da" --> Conf["Confirma<br/>POST /training/documents/{id}/confirm"]
+    Decide -- "Nu" --> CorD["Corecteaza eticheta<br/>POST /training/documents/{id}/correct"]
+    Conf --> Trig["Lanseaza antrenare<br/>POST /training/trigger"]
+    CorD --> Trig
+    Trig --> Job["Job background<br/>Celery + GPU"]
+    Job --> NewMod(["Model nou generat"])
+
+    Mod --> ListM["Lista modele<br/>GET /training/models"]
+    ListM --> Metr["Metrici model<br/>GET /training/models/{id}/metrics"]
+    Metr --> Dec2{"Acuratete OK?"}
+    Dec2 -- "Da" --> Activ["Activeaza<br/>POST /training/models/{id}/activate"]
+    Dec2 -- "Nu" --> Restore["Pastreaza modelul vechi"]
+    Activ --> Folosit(["Modelul intra in productie"])
+
+    Audit --> Log["Audit log<br/>GET /admin/audit/log"]
+    Audit --> Verif["Verifica hash chain<br/>GET /admin/audit/verify"]
+    Audit --> Health["System health<br/>GET /admin/system/health"]
+
+    classDef start fill:#dbeafe,stroke:#2563eb,color:#1e40af,stroke-width:3px
+    classDef admin fill:#fee2e2,stroke:#dc2626,color:#991b1b
+    classDef decision fill:#fef3c7,stroke:#d97706,color:#92400e
+    classDef ai fill:#ede9fe,stroke:#7c3aed,color:#5b21b6
+    classDef hub fill:#cffafe,stroke:#0891b2,color:#155e75,stroke-width:3px
+
+    class Start,Panou,Notif,Folosit,NewMod hub
+    class TFA,User,Train,Audit,Mod,CC,SR,AC,Stat,Doc,Conf,CorD,Activ,ListM,Metr,Log,Verif,Health,Restore admin
+    class UAct,Decide,Dec2 decision
+    class Trig,Job ai
