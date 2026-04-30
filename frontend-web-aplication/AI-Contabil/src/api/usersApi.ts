@@ -33,7 +33,7 @@ export const assignClient = (clientId: string): Promise<{ message: string }> =>
   });
 
 /** Admin: schimba rolul unui user. */
-export const changeUserRole = (userId: string, role: 'admin' | 'contabil' | 'client'): Promise<UserData> =>
+export const changeUserRole = (userId: string, role: 'admin' | 'contabil' | 'receptionist' | 'client'): Promise<UserData> =>
   apiRequest<UserData>(`/users/${userId}/role`, {
     method: 'PATCH',
     body: { role },
@@ -50,6 +50,13 @@ export interface CreateContabilData {
 /** Admin: creeaza direct un cont cu rol CONTABIL. */
 export const createContabil = (data: CreateContabilData): Promise<UserData> =>
   apiRequest<UserData>('/users/create-contabil', {
+    method: 'POST',
+    body: data,
+  });
+
+/** Admin: creeaza direct un cont cu rol RECEPTIONIST. */
+export const createReceptionist = (data: CreateContabilData): Promise<UserData> =>
+  apiRequest<UserData>('/users/create-receptionist', {
     method: 'POST',
     body: data,
   });

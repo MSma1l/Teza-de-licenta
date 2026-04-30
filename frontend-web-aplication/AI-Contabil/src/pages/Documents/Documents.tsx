@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Navbar from '../../components/Navbar/Navbar';
 import Footer from '../../components/Footer/Footer';
 import AlertToast from '../../components/AlertToast/AlertToast';
@@ -79,6 +80,11 @@ const Documents = () => {
 
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
+  const isContabil = user?.role === 'contabil';
+
+  // Pentru contabil: linkurile din "Clientii mei" pun ?client=<id> in URL
+  const [searchParams] = useSearchParams();
+  const clientFromUrl = searchParams.get('client');
 
   const [documents, setDocuments] = useState<DocumentData[]>([]);
   const [total, setTotal] = useState(0);
@@ -106,13 +112,16 @@ const Documents = () => {
   const adminAccountantId = isAdmin && selectedUserId && isContabilSelected ? selectedUserId : undefined;
   const adminOwnerId = isAdmin && selectedUserId && !isContabilSelected ? selectedUserId : undefined;
 
+  // Contabil: cand vine din "Clientii mei" → ?client=<id> filtreaza la acel client
+  const contabilOwnerId = isContabil && clientFromUrl ? clientFromUrl : undefined;
+
   const loadDocuments = async () => {
     setLoading(true);
     try {
       const data = await fetchDocuments({
         document_type: filterType || undefined,
         doc_status: filterStatus || undefined,
-        owner_id: adminOwnerId,
+        owner_id: adminOwnerId || contabilOwnerId,
         accountant_id: adminAccountantId,
         limit: 100,
       });
@@ -121,7 +130,7 @@ const Documents = () => {
     finally { setLoading(false); }
   };
 
-  useEffect(() => { loadDocuments(); }, [filterType, filterStatus, selectedUserId, selectedUserRole]);
+  useEffect(() => { loadDocuments(); }, [filterType, filterStatus, selectedUserId, selectedUserRole, clientFromUrl]);
 
   const handleUpload = async () => {
     if (!uploadFile || !uploadTitle.trim()) return;

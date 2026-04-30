@@ -88,6 +88,9 @@ def list_documents(
         client_ids = [link.client_id for link in client_links]
         client_ids.append(current_user.id)
         query = query.filter(Document.owner_id.in_(client_ids))
+        # Contabilul poate filtra mai departe la un singur client din lista lui
+        if owner_id and owner_id in client_ids:
+            query = query.filter(Document.owner_id == owner_id)
     # Admin vede tot — dar poate filtra cu owner_id (un singur user)
     # sau cu accountant_id (toti clientii unui contabil)
 

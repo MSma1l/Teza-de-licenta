@@ -20,10 +20,24 @@ import type { UserData } from '../../api/authApi';
 import { fetchDocuments, DOCUMENT_TYPES, DOCUMENT_STATUSES } from '../../api/documentsApi';
 import type { DocumentData } from '../../api/documentsApi';
 
-import { fetchDocumentOcr, triggerDocumentProcessing } from '../../api/trainingApi';
+import {
+  fetchDocumentOcr,
+  triggerDocumentProcessing,
+  submitCorrection,
+  confirmDocument,
+} from '../../api/trainingApi';
 import type { DocumentOcrData } from '../../api/trainingApi';
 
-type Tab = 'clienti' | 'coada' | 'solicitari' | 'rapoarte';
+import {
+  getEscalatedConversations,
+  getEscalatedDetail,
+  respondToEscalation,
+  resolveConversation,
+  type Conversation,
+  type ChatMessage as ChatMsg,
+} from '../../api/chatApi';
+
+type Tab = 'clienti' | 'coada' | 'chat' | 'solicitari' | 'rapoarte';
 
 const Contabil = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -52,6 +66,7 @@ const Contabil = () => {
           {([
             { id: 'clienti', label: 'Clientii mei', icon: '👥' },
             { id: 'coada', label: 'Coada documente', icon: '📥' },
+            { id: 'chat', label: 'Chat clienți', icon: '💬' },
             { id: 'solicitari', label: 'Solicitari', icon: '✉️' },
             { id: 'rapoarte', label: 'Rapoarte SFS', icon: '📊' },
           ] as const).map((t) => (
@@ -73,6 +88,7 @@ const Contabil = () => {
         {/* Continut tab activ */}
         {tab === 'clienti' && <TabClienti />}
         {tab === 'coada' && <TabCoada />}
+        {tab === 'chat' && <TabChatClienti />}
         {tab === 'solicitari' && <TabSolicitari />}
         {tab === 'rapoarte' && <TabRapoarte />}
       </div>
@@ -252,6 +268,33 @@ function TabCoada() {
     }
   }
 
+  async function aprobaDocument() {
+    if (!docSelectat) return;
+    try {
+      await confirmDocument(docSelectat.id);
+      setFeedbackProcesare('✓ Document aprobat. Statusul a fost actualizat.');
+      // Reincarca atat OCR cat si lista
+      const data = await fetchDocumentOcr(docSelectat.id);
+      setOcrData(data);
+      await incarcaCoada();
+    } catch (e) {
+      setFeedbackProcesare(e instanceof Error ? e.message : 'Eroare la aprobare');
+    }
+  }
+
+  async function salveazaCorectii(corectii: Record<string, string>) {
+    if (!docSelectat) return;
+    try {
+      await submitCorrection(docSelectat.id, { fields: corectii });
+      setFeedbackProcesare(`✓ Corectii salvate (${Object.keys(corectii).length} campuri).`);
+      const data = await fetchDocumentOcr(docSelectat.id);
+      setOcrData(data);
+      await incarcaCoada();
+    } catch (e) {
+      setFeedbackProcesare(e instanceof Error ? e.message : 'Eroare la salvare');
+    }
+  }
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.4fr] gap-5">
       {/* Stanga — coada */}
@@ -300,6 +343,8 @@ function TabCoada() {
             ocr={ocrData}
             loading={loadingOcr}
             onProceseaza={lanseazaProcesare}
+            onAproba={aprobaDocument}
+            onSalveazaCorectii={salveazaCorectii}
             proceseaza={proceseaza}
             feedbackProcesare={feedbackProcesare}
           />
@@ -641,6 +686,8 @@ function PanouValidare({
   ocr,
   loading,
   onProceseaza,
+  onAproba,
+  onSalveazaCorectii,
   proceseaza,
   feedbackProcesare,
 }: {
@@ -648,6 +695,8 @@ function PanouValidare({
   ocr: DocumentOcrData | null;
   loading: boolean;
   onProceseaza: () => void;
+  onAproba: () => void | Promise<void>;
+  onSalveazaCorectii: (corectii: Record<string, string>) => void | Promise<void>;
   proceseaza: boolean;
   feedbackProcesare: string | null;
 }) {
@@ -661,6 +710,50 @@ function PanouValidare({
       return a.confidence - b.confidence;
     });
   }, [campuri]);
+
+  // State pentru valorile editate — keyed pe field_name. Resetam cand se schimba documentul.
+  const [valoriEditate, setValoriEditate] = useState<Record<string, string>>({});
+  const [actiune, setActiune] = useState<'aproba' | 'salveaza' | null>(null);
+
+  useEffect(() => {
+    // Initializam valorile cand se incarca campuri noi
+    const init: Record<string, string> = {};
+    campuri.forEach((f) => { init[f.field_name] = f.value; });
+    setValoriEditate(init);
+  }, [ocr?.document.id]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+
+  // Detectam ce s-a schimbat fata de valorile originale (din OCR)
+  const corectii = useMemo(() => {
+    const delta: Record<string, string> = {};
+    campuri.forEach((f) => {
+      const noua = valoriEditate[f.field_name];
+      if (noua !== undefined && noua !== f.value) {
+        delta[f.field_name] = noua;
+      }
+    });
+    return delta;
+  }, [campuri, valoriEditate]);
+
+  const areCorectii = Object.keys(corectii).length > 0;
+
+  async function handleAproba() {
+    setActiune('aproba');
+    try {
+      await onAproba();
+    } finally {
+      setActiune(null);
+    }
+  }
+
+  async function handleSalveaza() {
+    setActiune('salveaza');
+    try {
+      await onSalveazaCorectii(corectii);
+    } finally {
+      setActiune(null);
+    }
+  }
 
   return (
     <div>
@@ -748,7 +841,8 @@ function PanouValidare({
                 </div>
                 <input
                   type="text"
-                  defaultValue={f.value}
+                  value={valoriEditate[f.field_name] ?? f.value}
+                  onChange={(e) => setValoriEditate((prev) => ({ ...prev, [f.field_name]: e.target.value }))}
                   className="w-full bg-transparent border-none p-0 text-sm font-medium text-neutral-900 focus:outline-none"
                 />
                 {galben && (
@@ -760,16 +854,308 @@ function PanouValidare({
             );
           })}
 
+          {feedbackProcesare && (
+            <div className="text-sm bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-md p-2 mt-3">
+              {feedbackProcesare}
+            </div>
+          )}
+
           <div className="flex gap-2 pt-3 mt-3 border-t border-neutral-100">
-            <button className="flex-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-md">
-              Aproba document
+            <button
+              onClick={handleAproba}
+              disabled={actiune !== null}
+              className="flex-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-md disabled:opacity-50 inline-flex items-center justify-center gap-2"
+              title="Marcheaza documentul ca aprobat (status: APROBAT) si genereaza un exemplu pozitiv pentru reantrenare AI"
+            >
+              {actiune === 'aproba' ? '⏳ Aprob...' : '✓ Aproba document'}
             </button>
-            <button className="px-4 py-2 bg-amber-100 hover:bg-amber-200 text-amber-900 font-semibold rounded-md">
-              Salveaza corectii
+            <button
+              onClick={handleSalveaza}
+              disabled={!areCorectii || actiune !== null}
+              className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-md disabled:bg-neutral-200 disabled:text-neutral-400 disabled:cursor-not-allowed"
+              title={
+                areCorectii
+                  ? `Salveaza ${Object.keys(corectii).length} corectii si genereaza un exemplu de antrenare`
+                  : 'Modifica un camp inainte ca sa salvezi corectii'
+              }
+            >
+              {actiune === 'salveaza'
+                ? '⏳ Salvez...'
+                : areCorectii
+                  ? `Salveaza corectii (${Object.keys(corectii).length})`
+                  : 'Salveaza corectii'}
             </button>
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/* ============================================
+   TAB — Chat clienti (conversatii escalate de Djarvis)
+   ============================================ */
+function TabChatClienti() {
+  const [convos, setConvos] = useState<Conversation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showResolved, setShowResolved] = useState(false);
+
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [detail, setDetail] = useState<Conversation | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [reply, setReply] = useState('');
+  const [sending, setSending] = useState(false);
+  const [resolving, setResolving] = useState(false);
+  const [feedback, setFeedback] = useState<string | null>(null);
+
+  const reloadList = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await getEscalatedConversations(showResolved);
+      setConvos(data);
+    } catch (e) {
+      setFeedback(e instanceof Error ? e.message : 'Eroare incarcare conversatii');
+    } finally {
+      setLoading(false);
+    }
+  }, [showResolved]);
+
+  useEffect(() => { reloadList(); }, [reloadList]);
+
+  // Polling — refresh detail la fiecare 5s daca o conversatie e selectata si deschisa
+  useEffect(() => {
+    if (!selectedId) return;
+    let mounted = true;
+    const tick = async () => {
+      try {
+        const d = await getEscalatedDetail(selectedId);
+        if (mounted) setDetail(d);
+      } catch { /* ignore */ }
+    };
+    const interval = setInterval(tick, 5000);
+    return () => { mounted = false; clearInterval(interval); };
+  }, [selectedId]);
+
+  async function selecteazaConvo(id: string) {
+    setSelectedId(id);
+    setDetail(null);
+    setReply('');
+    setFeedback(null);
+    setLoadingDetail(true);
+    try {
+      const d = await getEscalatedDetail(id);
+      setDetail(d);
+    } catch (e) {
+      setFeedback(e instanceof Error ? e.message : 'Eroare detaliu');
+    } finally {
+      setLoadingDetail(false);
+    }
+  }
+
+  async function trimiteRaspuns() {
+    if (!selectedId || !reply.trim()) return;
+    setSending(true);
+    setFeedback(null);
+    try {
+      await respondToEscalation(selectedId, reply.trim());
+      setReply('');
+      // Reincarca conversatia ca sa apara mesajul nou
+      const d = await getEscalatedDetail(selectedId);
+      setDetail(d);
+    } catch (e) {
+      setFeedback(e instanceof Error ? e.message : 'Eroare la trimitere');
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function rezolva() {
+    if (!selectedId) return;
+    if (!confirm('Marchez conversatia ca rezolvata? Va salva intrebarea+raspunsul in FAQ ca AI sa raspunda data viitoare.')) return;
+    setResolving(true);
+    try {
+      await resolveConversation(selectedId);
+      setFeedback('✓ Conversatie rezolvata. Q&A salvat in FAQ.');
+      await reloadList();
+      setSelectedId(null);
+      setDetail(null);
+    } catch (e) {
+      setFeedback(e instanceof Error ? e.message : 'Eroare la rezolvare');
+    } finally {
+      setResolving(false);
+    }
+  }
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.4fr] gap-5">
+      {/* Stanga — lista conversatii */}
+      <div className="bg-white rounded-xl border border-neutral-200 p-4 max-h-[78vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-4 gap-2">
+          <h2 className="font-bold text-neutral-900">
+            Întrebări escaladate
+            <span className="ml-2 text-xs font-normal text-neutral-500">({convos.length})</span>
+          </h2>
+          <label className="text-xs text-neutral-600 inline-flex items-center gap-1.5 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showResolved}
+              onChange={(e) => setShowResolved(e.target.checked)}
+            />
+            include rezolvate
+          </label>
+        </div>
+
+        {loading ? (
+          <p className="text-sm text-neutral-500 py-8 text-center">Se incarca...</p>
+        ) : convos.length === 0 ? (
+          <p className="text-sm text-neutral-500 py-8 text-center italic">
+            Niciuna conversatie escaladata. Cand Djarvis nu poate raspunde, intrebarea apare aici.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {convos.map((c) => {
+              const ultimMesaj = c.messages?.[c.messages.length - 1];
+              const primulMesaj = c.messages?.find((m) => m.sender_type === 'client');
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => selecteazaConvo(c.id)}
+                  className={`w-full text-left p-3 rounded-lg border transition ${
+                    selectedId === c.id
+                      ? 'border-indigo-500 bg-indigo-50'
+                      : 'border-neutral-200 bg-white hover:border-indigo-200 hover:bg-neutral-50'
+                  }`}
+                >
+                  <div className="flex justify-between items-start gap-2 mb-1">
+                    <span className="text-xs font-semibold text-neutral-500">
+                      Client: {c.user_id.slice(0, 8)}...
+                    </span>
+                    {c.is_resolved ? (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                        REZOLVAT
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                        DESCHIS
+                      </span>
+                    )}
+                  </div>
+                  {primulMesaj && (
+                    <div className="text-sm font-medium text-neutral-900 line-clamp-2">
+                      {primulMesaj.content}
+                    </div>
+                  )}
+                  {ultimMesaj && ultimMesaj.id !== primulMesaj?.id && (
+                    <div className="text-xs text-neutral-500 mt-1">
+                      Ultim: {ultimMesaj.sender_type === 'contabil' ? '✉ tu' : ultimMesaj.sender_type === 'client' ? '👤 client' : '🤖 ai'}: {ultimMesaj.content.slice(0, 60)}...
+                    </div>
+                  )}
+                  <div className="text-[10px] text-neutral-400 mt-1">
+                    {new Date(c.created_at).toLocaleString('ro')}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Dreapta — conversatie + reply */}
+      <div className="bg-white rounded-xl border border-neutral-200 p-5 max-h-[78vh] flex flex-col">
+        {!selectedId ? (
+          <CardStareGoala
+            text="Selecteaza o conversatie din stanga pentru a o citi si raspunde."
+            icon="👈"
+          />
+        ) : loadingDetail || !detail ? (
+          <p className="text-sm text-neutral-500 py-8 text-center">Se incarca conversatia...</p>
+        ) : (
+          <>
+            <div className="flex items-center justify-between mb-3 pb-3 border-b border-neutral-100">
+              <div>
+                <h3 className="font-bold text-neutral-900">Conversatie cu clientul</h3>
+                <p className="text-xs text-neutral-500">
+                  Client ID: {detail.user_id.slice(0, 8)}... · {detail.messages.length} mesaje
+                </p>
+              </div>
+              {!detail.is_resolved && (
+                <button
+                  onClick={rezolva}
+                  disabled={resolving}
+                  className="text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-md disabled:opacity-50"
+                >
+                  {resolving ? 'Rezolv...' : '✓ Marcheaza rezolvat'}
+                </button>
+              )}
+            </div>
+
+            {/* Mesaje */}
+            <div className="flex-1 overflow-y-auto space-y-3 pr-2">
+              {detail.messages.map((m: ChatMsg) => {
+                const aliniat =
+                  m.sender_type === 'contabil' ? 'justify-end' : 'justify-start';
+                const bula =
+                  m.sender_type === 'contabil'
+                    ? 'bg-emerald-600 text-white rounded-br-md'
+                    : m.sender_type === 'ai'
+                      ? 'bg-neutral-200 text-neutral-800 rounded-bl-md'
+                      : 'bg-indigo-100 text-indigo-900 rounded-bl-md';
+                const eticheta =
+                  m.sender_type === 'contabil' ? '✉ Tu (contabil)' :
+                  m.sender_type === 'ai' ? '🤖 Djarvis' :
+                  '👤 Client';
+                return (
+                  <div key={m.id} className={`flex ${aliniat}`}>
+                    <div className="max-w-[80%]">
+                      <div className="text-[10px] font-bold uppercase text-neutral-500 mb-0.5">
+                        {eticheta}
+                      </div>
+                      <div className={`px-3 py-2 rounded-2xl text-sm ${bula}`}>
+                        {m.content}
+                      </div>
+                      <div className={`text-[10px] text-neutral-400 mt-0.5 ${m.sender_type === 'contabil' ? 'text-right' : ''}`}>
+                        {new Date(m.created_at).toLocaleString('ro')}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {feedback && (
+              <div className="text-xs bg-amber-50 border border-amber-200 text-amber-800 rounded-md p-2 my-2">
+                {feedback}
+              </div>
+            )}
+
+            {/* Reply */}
+            {!detail.is_resolved ? (
+              <div className="border-t border-neutral-100 pt-3 mt-3">
+                <textarea
+                  value={reply}
+                  onChange={(e) => setReply(e.target.value)}
+                  rows={3}
+                  placeholder="Raspunde clientului..."
+                  className="w-full border border-neutral-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                />
+                <div className="flex justify-end mt-2">
+                  <button
+                    onClick={trimiteRaspuns}
+                    disabled={!reply.trim() || sending}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-md disabled:opacity-50 text-sm"
+                  >
+                    {sending ? 'Trimit...' : 'Trimite raspuns'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="border-t border-neutral-100 pt-3 mt-3 text-xs text-neutral-500 italic text-center">
+                Conversatie rezolvata. Q&A salvat in baza FAQ.
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

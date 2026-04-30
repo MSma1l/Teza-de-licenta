@@ -116,7 +116,8 @@ services:
       - ai_model_storage:/app/model_storage
       - ai_training_data:/app/training_data
       - ./backend-project/storage:/app/storage
-      - ./backend-project/training-data/legislatie:/app/training_data/legislatie:ro
+      # rw → admin poate aduga articole prin POST /agent/legislatie/add (user_added.jsonl)
+      - ./backend-project/training-data/legislatie:/app/training_data/legislatie
     networks:
       - ai_contabil_network
     # GPU NVIDIA pentru torch/transformers/PaddleOCR. Codul foloseste deja

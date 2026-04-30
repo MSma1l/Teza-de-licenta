@@ -18,8 +18,9 @@ from sqlalchemy import func
 
 from app.core.database import get_db
 from app.api.deps import get_current_user
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.models.faq import FaqEntry, ChatConversation, ChatMessage
+from app.models.notification import Notification, NotificationType
 from app.schemas.chat import (
     ChatMessageRequest,
     ChatMessageResponse,
@@ -145,6 +146,13 @@ def send_message(
     db.add(client_msg)
     db.flush()
 
+    # Daca conversatia e escaladata si nerezolvata → mesajul merge direct catre
+    # contabil. NU mai apelam FAQ/Djarvis (ar incurca dialogul).
+    if conversation.is_escalated and not conversation.is_resolved:
+        db.commit()
+        db.refresh(client_msg)
+        return client_msg
+
     # Cauta raspuns in FAQ
     faq_match, confidence = find_best_faq_match(data.message, db)
 
@@ -192,12 +200,43 @@ def send_message(
             db.refresh(ai_msg)
             return ai_msg
 
-        # Djarvis indisponibil / a esuat -> escaladare la contabil (fallback)
+        # Djarvis indisponibil / a esuat -> escaladare. Mesajul merge la
+        # receptionist (prima linie). Daca nu exista receptionist activ,
+        # cad pe oricare contabil disponibil.
         conversation.is_escalated = True
+
+        receptionists = db.query(User).filter(
+            User.role == UserRole.RECEPTIONIST,
+            User.is_active == True,
+        ).all()
+        if receptionists:
+            target_role = "receptionistului nostru"
+            for r in receptionists:
+                db.add(Notification(
+                    user_id=r.id,
+                    title="Intrebare client escaladata",
+                    message=(data.message or "").strip()[:200],
+                    notification_type=NotificationType.URGENT,
+                ))
+        else:
+            # Fallback: notificam toti contabilii activi
+            target_role = "contabilului"
+            contabili = db.query(User).filter(
+                User.role == UserRole.CONTABIL,
+                User.is_active == True,
+            ).all()
+            for c in contabili:
+                db.add(Notification(
+                    user_id=c.id,
+                    title="Intrebare client escaladata (fara receptionist)",
+                    message=(data.message or "").strip()[:200],
+                    notification_type=NotificationType.URGENT,
+                ))
+
         escalation_text = (
-            "Nu am putut formula un raspuns sigur acum. "
-            "Am creat o solicitare pentru contabilul tau — vei primi notificare cand "
-            "raspunsul profesional e gata."
+            f"Nu am putut formula un raspuns sigur acum. Am trimis intrebarea "
+            f"{target_role} — primesti raspunsul aici de indata ce e gata. "
+            "Poti continua sa scrii in acest chat."
         )
 
         ai_msg = ChatMessage(
@@ -273,18 +312,101 @@ def list_faq(
     return db.query(FaqEntry).filter(FaqEntry.is_active == True).order_by(FaqEntry.usage_count.desc()).all()
 
 
-@router.get("/escalated", response_model=list[ConversationResponse])
-def get_escalated(
+@router.post("/forward/{conversation_id}")
+def forward_to_contabil(
+    conversation_id: str,
+    payload: dict,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Lista conversatii escalate (doar contabili/admin)."""
-    if current_user.role.value not in ("contabil", "admin"):
+    """Receptionist transmite o conversatie unui contabil specific.
+
+    Body: { "contabil_id": "<id>", "note": "optional, ce a discutat receptionistul" }
+    Adauga un mesaj de tip 'ai' care anunta forward + notifica contabilul.
+    """
+    role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
+    if role not in ("receptionist", "admin", "super_admin"):
+        raise HTTPException(status_code=403, detail="Doar receptionistul poate forward-a")
+
+    convo = db.query(ChatConversation).filter(ChatConversation.id == conversation_id).first()
+    if not convo:
+        raise HTTPException(status_code=404, detail="Conversatie negasita")
+
+    contabil_id = (payload.get("contabil_id") or "").strip()
+    if not contabil_id:
+        raise HTTPException(status_code=400, detail="contabil_id obligatoriu")
+
+    contabil = db.query(User).filter(
+        User.id == contabil_id,
+        User.role == UserRole.CONTABIL,
+        User.is_active == True,
+    ).first()
+    if not contabil:
+        raise HTTPException(status_code=404, detail="Contabil negasit / inactiv")
+
+    convo.escalated_to = contabil.id
+
+    # Mesaj sistem in conversatie
+    nota = (payload.get("note") or "").strip()
+    handoff_text = (
+        f"Conversatia a fost transmisa contabilului {contabil.full_name or contabil.username}. "
+        + (f"Nota receptionist: {nota}" if nota else "")
+    )
+    db.add(ChatMessage(
+        conversation_id=conversation_id,
+        sender_type="ai",
+        content=handoff_text,
+        confidence=1.0,
+    ))
+
+    # Notifica contabilul
+    db.add(Notification(
+        user_id=contabil.id,
+        title="Conversatie transmisa de receptionist",
+        message=nota[:200] if nota else "Verifica intrebarea clientului.",
+        notification_type=NotificationType.URGENT,
+    ))
+
+    db.commit()
+    return {"status": "forwarded", "conversation_id": conversation_id, "contabil_id": contabil.id}
+
+
+@router.get("/escalated", response_model=list[ConversationResponse])
+def get_escalated(
+    include_resolved: bool = False,
+    only_mine: bool = False,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Lista conversatii escalate (receptionist/contabil/admin).
+
+    `only_mine` (contabili) → returneaza doar cele forward-uite catre el.
+    """
+    role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
+    if role not in ("receptionist", "contabil", "admin", "super_admin"):
         raise HTTPException(status_code=403, detail="Acces restrictionat")
-    return db.query(ChatConversation).filter(
-        ChatConversation.is_escalated == True,
-        ChatConversation.is_resolved == False,
-    ).order_by(ChatConversation.created_at.desc()).all()
+    q = db.query(ChatConversation).filter(ChatConversation.is_escalated == True)
+    if not include_resolved:
+        q = q.filter(ChatConversation.is_resolved == False)
+    if only_mine and role == "contabil":
+        q = q.filter(ChatConversation.escalated_to == current_user.id)
+    return q.order_by(ChatConversation.updated_at.desc()).all()
+
+
+@router.get("/escalated/{conversation_id}", response_model=ConversationResponse)
+def get_escalated_detail(
+    conversation_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Detalii conversatie escalata — include toate mesajele."""
+    role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
+    if role not in ("receptionist", "contabil", "admin", "super_admin"):
+        raise HTTPException(status_code=403, detail="Acces restrictionat")
+    convo = db.query(ChatConversation).filter(ChatConversation.id == conversation_id).first()
+    if not convo:
+        raise HTTPException(status_code=404, detail="Conversatie negasita")
+    return convo
 
 
 @router.post("/respond/{conversation_id}", response_model=ChatMessageResponse)
@@ -294,9 +416,10 @@ def respond_to_escalation(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Contabilul raspunde la o conversatie escalata + salveaza in FAQ."""
-    if current_user.role.value not in ("contabil", "admin"):
-        raise HTTPException(status_code=403, detail="Doar contabilii pot raspunde")
+    """Receptionist sau contabil raspunde la o conversatie escalata."""
+    role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
+    if role not in ("receptionist", "contabil", "admin", "super_admin"):
+        raise HTTPException(status_code=403, detail="Doar receptionistul/contabilul poate raspunde")
 
     convo = db.query(ChatConversation).filter(
         ChatConversation.id == conversation_id,
@@ -304,7 +427,8 @@ def respond_to_escalation(
     if not convo:
         raise HTTPException(status_code=404, detail="Conversatie negasita")
 
-    # Salveaza raspunsul contabilului
+    # Salveaza raspunsul contabilului — conversatia ramane DESCHISA pentru dialog
+    # continuu cu clientul. Marcam doar contabilul asignat.
     msg = ChatMessage(
         conversation_id=conversation_id,
         sender_type="contabil",
@@ -313,25 +437,65 @@ def respond_to_escalation(
     )
     db.add(msg)
 
-    # Marcheaza conversatia ca rezolvata
-    convo.is_resolved = True
-    convo.escalated_to = current_user.id
-
-    # Gaseste intrebarea originala a clientului si salveaza in FAQ
-    client_msg = db.query(ChatMessage).filter(
-        ChatMessage.conversation_id == conversation_id,
-        ChatMessage.sender_type == "client",
-    ).first()
-
-    if client_msg:
-        faq = FaqEntry(
-            question=client_msg.content,
-            answer=data.message,
-            category="consultare",
-            created_by=current_user.id,
-        )
-        db.add(faq)
+    if not convo.escalated_to:
+        convo.escalated_to = current_user.id
 
     db.commit()
     db.refresh(msg)
     return msg
+
+
+@router.post("/conversations/{conversation_id}/resolve")
+def resolve_conversation(
+    conversation_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Marcheaza conversatia ca rezolvata. Salveaza intrebarea + raspunsul in FAQ
+    pentru ca data viitoare AI-ul sa raspunda direct.
+
+    Permis pentru: contabilul asignat, orice contabil/admin daca nimeni nu e asignat,
+    sau clientul care a deschis conversatia (poate inchide cand a primit ce avea nevoie).
+    """
+    convo = db.query(ChatConversation).filter(ChatConversation.id == conversation_id).first()
+    if not convo:
+        raise HTTPException(status_code=404, detail="Conversatie negasita")
+
+    role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
+    is_owner_client = convo.user_id == current_user.id
+    is_assigned_contabil = convo.escalated_to == current_user.id
+    is_priviledged = role in ("contabil", "admin", "super_admin")
+    if not (is_owner_client or is_assigned_contabil or is_priviledged):
+        raise HTTPException(status_code=403, detail="Nu ai permisiunea de a inchide aceasta conversatie")
+
+    convo.is_resolved = True
+
+    # Daca contabilul a raspuns in conversatie, salveaza Q&A in FAQ
+    if convo.is_escalated and role in ("contabil", "admin", "super_admin"):
+        prima_intrebare = (
+            db.query(ChatMessage)
+            .filter(ChatMessage.conversation_id == conversation_id, ChatMessage.sender_type == "client")
+            .order_by(ChatMessage.created_at.asc())
+            .first()
+        )
+        ultim_raspuns_contabil = (
+            db.query(ChatMessage)
+            .filter(ChatMessage.conversation_id == conversation_id, ChatMessage.sender_type == "contabil")
+            .order_by(ChatMessage.created_at.desc())
+            .first()
+        )
+        if prima_intrebare and ultim_raspuns_contabil:
+            existing = db.query(FaqEntry).filter(
+                FaqEntry.question == prima_intrebare.content,
+                FaqEntry.answer == ultim_raspuns_contabil.content,
+            ).first()
+            if not existing:
+                db.add(FaqEntry(
+                    question=prima_intrebare.content,
+                    answer=ultim_raspuns_contabil.content,
+                    category="consultare",
+                    created_by=current_user.id,
+                ))
+
+    db.commit()
+    return {"status": "resolved", "conversation_id": conversation_id}

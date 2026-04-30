@@ -420,3 +420,31 @@ def create_contabil(
     db.commit()
     db.refresh(user)
     return user
+
+
+@router.post("/create-receptionist", response_model=UserResponse, status_code=201)
+def create_receptionist(
+    data: CreateContabilRequest,
+    current_user: User = Depends(require_role(UserRole.ADMIN, UserRole.SUPER_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    """Admin creeaza un cont nou cu rol RECEPTIONIST."""
+    if db.query(User).filter(User.email == data.email).first():
+        raise HTTPException(status_code=400, detail="Email-ul este deja folosit")
+    if db.query(User).filter(User.username == data.username).first():
+        raise HTTPException(status_code=400, detail="Username-ul este deja folosit")
+
+    user = User(
+        username=data.username,
+        email=data.email,
+        password_hash=hash_password(data.password),
+        full_name=data.full_name,
+        phone=data.phone,
+        role=UserRole.RECEPTIONIST,
+        is_active=True,
+        is_verified=True,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user

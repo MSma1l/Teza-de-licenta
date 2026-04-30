@@ -9,9 +9,12 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.models.user import User, UserRole
-from app.models.document import Document
+from app.models.document import Document, DocumentStatus
 from app.models.accountant_client import AccountantClient
 from app.models.audit_log import AuditLog
+from app.models.report import Report
+from app.models.faq import ChatConversation, ChatMessage
+from app.models.consultation_request import ConsultationRequest, ConsultationStatus
 from app.api.deps import require_role
 
 router = APIRouter(prefix="/admin/dashboard", tags=["Admin Dashboard"])
@@ -109,6 +112,113 @@ def stats_audit_log(
         }
         for r in rows
     ]
+
+
+@router.get("/staff-activity")
+def staff_activity(
+    current_user: User = Depends(require_role(UserRole.ADMIN, UserRole.SUPER_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    """Activitate detaliata pentru fiecare CONTABIL si RECEPTIONIST.
+    Returnat ca doua liste paralele (contabili / receptionisti) — admin
+    monitorizeaza productivitatea fiecaruia.
+    """
+    # === CONTABILI ===
+    contabili = db.query(User).filter(User.role == UserRole.CONTABIL).all()
+    contabili_out = []
+    for c in contabili:
+        client_ids_rows = db.query(AccountantClient.client_id).filter(
+            AccountantClient.accountant_id == c.id,
+            AccountantClient.is_active == True,
+        ).all()
+        client_ids = [r[0] for r in client_ids_rows]
+
+        if client_ids:
+            docs_aprobate = db.query(func.count(Document.id)).filter(
+                Document.owner_id.in_(client_ids),
+                Document.status == DocumentStatus.APROBAT.value,
+            ).scalar() or 0
+            docs_pending = db.query(func.count(Document.id)).filter(
+                Document.owner_id.in_(client_ids),
+                Document.status.in_([
+                    DocumentStatus.INCARCAT.value,
+                    DocumentStatus.IN_PROCESARE.value,
+                    DocumentStatus.OCR_COMPLET.value,
+                    DocumentStatus.CLASIFICAT.value,
+                    DocumentStatus.EXTRAS.value,
+                    DocumentStatus.PENDING_APPROVAL.value,
+                ])
+            ).scalar() or 0
+        else:
+            docs_aprobate = docs_pending = 0
+
+        rapoarte_total = db.query(func.count(Report.id)).filter(Report.created_by == c.id).scalar() or 0
+        chat_raspunse = db.query(func.count(ChatMessage.id)).filter(
+            ChatMessage.sender_type == "contabil",
+            ChatMessage.conversation_id.in_(
+                db.query(ChatConversation.id).filter(ChatConversation.escalated_to == c.id)
+            )
+        ).scalar() or 0
+
+        contabili_out.append({
+            "id": c.id,
+            "username": c.username,
+            "full_name": c.full_name,
+            "is_active": c.is_active,
+            "last_login": c.last_login.isoformat() if c.last_login else None,
+            "clienti_asignati": len(client_ids),
+            "documente_aprobate": int(docs_aprobate),
+            "documente_in_lucru": int(docs_pending),
+            "rapoarte_create": int(rapoarte_total),
+            "chat_raspunse": int(chat_raspunse),
+        })
+
+    # === RECEPTIONISTI ===
+    receptionisti = db.query(User).filter(User.role == UserRole.RECEPTIONIST).all()
+    receptionisti_out = []
+    for r in receptionisti:
+        cereri_total = db.query(func.count(ConsultationRequest.id)).filter(
+            ConsultationRequest.assigned_to == r.id
+        ).scalar() or 0
+        cereri_inchise = db.query(func.count(ConsultationRequest.id)).filter(
+            ConsultationRequest.assigned_to == r.id,
+            ConsultationRequest.status.in_([ConsultationStatus.INCHIS_OK.value, ConsultationStatus.INCHIS_RESPINS.value]),
+        ).scalar() or 0
+        chat_raspunse = db.query(func.count(ChatMessage.id)).filter(
+            ChatMessage.sender_type == "contabil",  # receptionist replies are stored as 'contabil' for now
+            ChatMessage.conversation_id.in_(
+                db.query(ChatConversation.id).filter(ChatConversation.escalated_to == r.id)
+            )
+        ).scalar() or 0
+
+        receptionisti_out.append({
+            "id": r.id,
+            "username": r.username,
+            "full_name": r.full_name,
+            "is_active": r.is_active,
+            "last_login": r.last_login.isoformat() if r.last_login else None,
+            "cereri_preluate": int(cereri_total),
+            "cereri_inchise": int(cereri_inchise),
+            "chat_raspunse": int(chat_raspunse),
+        })
+
+    # === Cereri consultatie agregate ===
+    consultatii_status = (
+        db.query(ConsultationRequest.status, func.count(ConsultationRequest.id))
+        .group_by(ConsultationRequest.status)
+        .all()
+    )
+    consultatii_total = sum(c for _, c in consultatii_status)
+    consultatii_by_status = {s: c for s, c in consultatii_status}
+
+    return {
+        "contabili": contabili_out,
+        "receptionisti": receptionisti_out,
+        "consultatii": {
+            "total": consultatii_total,
+            "by_status": consultatii_by_status,
+        },
+    }
 
 
 @router.get("/top-contabili")

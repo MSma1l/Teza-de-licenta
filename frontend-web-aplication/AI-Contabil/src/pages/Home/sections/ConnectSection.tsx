@@ -7,6 +7,7 @@ import SendIcon from '@mui/icons-material/Send';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import { useLanguage } from '../../../context/LanguageContext';
 import type { Lang } from '../../../context/LanguageContext';
+import { submitConsultation } from '../../../api/consultationsApi';
 
 const t: Record<Lang, {
   label: string;
@@ -84,10 +85,39 @@ const ConnectSection = () => {
   const { lang } = useLanguage();
   const tr = t[lang];
   const [sent, setSent] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // State controlat pe campuri ca sa putem trimite payload corect
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [company, setCompany] = useState('');
+  const [message, setMessage] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSent(true);
+    if (submitting) return;
+    if (!fullName.trim() || !email.trim()) {
+      setError('Numele si email-ul sunt obligatorii.');
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      await submitConsultation({
+        full_name: fullName.trim(),
+        email: email.trim(),
+        phone: phone.trim() || undefined,
+        company_name: company.trim() || undefined,
+        message: message.trim() || undefined,
+      });
+      setSent(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Nu am putut trimite cererea. Incearca din nou.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -135,27 +165,64 @@ const ConnectSection = () => {
           <form onSubmit={handleSubmit} className="flex flex-col gap-4 p-8 rounded-2xl border border-neutral-200 bg-white shadow-lg">
             <div className={inputWrap}>
               <PersonOutlineIcon className="text-neutral-400" />
-              <input type="text" className={inputClass} placeholder={tr.name} required />
+              <input
+                type="text"
+                className={inputClass}
+                placeholder={tr.name}
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                required
+              />
             </div>
             <div className={inputWrap}>
               <EmailOutlinedIcon className="text-neutral-400" />
-              <input type="email" className={inputClass} placeholder={tr.email} required />
+              <input
+                type="email"
+                className={inputClass}
+                placeholder={tr.email}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
             </div>
             <div className={inputWrap}>
               <LocalPhoneOutlinedIcon className="text-neutral-400" />
-              <input type="tel" className={inputClass} placeholder={tr.phone} />
+              <input
+                type="tel"
+                className={inputClass}
+                placeholder={tr.phone}
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+              />
             </div>
             <div className={inputWrap}>
               <BusinessIcon className="text-neutral-400" />
-              <input type="text" className={inputClass} placeholder={tr.company} />
+              <input
+                type="text"
+                className={inputClass}
+                placeholder={tr.company}
+                value={company}
+                onChange={(e) => setCompany(e.target.value)}
+              />
             </div>
             <textarea
               className="bg-neutral-50 rounded-xl px-5 py-3.5 border border-neutral-200 text-base text-neutral-black font-medium placeholder:text-neutral-400 resize-none h-24 transition-all duration-200 focus:border-[#4f46e5] focus:shadow-[0_0_0_3px_rgba(79,70,229,0.1)] focus:outline-none"
               placeholder={tr.message}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
             />
-            <button type="submit" className="btn-gradient py-3.5 rounded-xl text-base font-bold mt-2 flex items-center justify-center gap-2">
+            {error && (
+              <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+                {error}
+              </div>
+            )}
+            <button
+              type="submit"
+              disabled={submitting}
+              className="btn-gradient py-3.5 rounded-xl text-base font-bold mt-2 flex items-center justify-center gap-2 disabled:opacity-50"
+            >
               <SendIcon style={{ fontSize: 18 }} />
-              {tr.submit}
+              {submitting ? '…' : tr.submit}
             </button>
           </form>
         )}

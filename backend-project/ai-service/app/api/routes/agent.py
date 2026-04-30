@@ -14,7 +14,7 @@ from __future__ import annotations
 import re
 from typing import Literal
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 from loguru import logger
 
@@ -22,6 +22,7 @@ from app.agent.prompt import SYSTEM_PROMPT, build_user_prompt
 from app.agent.ollama_client import genereaza, model_disponibil
 from app.agent.retriever import retriever
 from app.agent.suggestions import sugereaza, lista_toate
+from app.api.deps import require_role
 
 
 _BRACKET_REF = re.compile(r"\s*\[(\d+)\]")
@@ -95,6 +96,54 @@ class RaspunsAgent(BaseModel):
     sources: list[SursaRezultat]
     used_rag: bool
     model: str
+
+
+@router.post("/legislatie/add")
+async def adauga_articol_legislatie(
+    payload: dict,
+    user=Depends(require_role("admin", "super_admin")),
+):
+    """Adauga un articol nou in corpusul RAG al lui Djarvis.
+
+    Articolul este appended intr-un fisier `user_added.jsonl` din directorul de
+    legislatie. Indexul FAISS se reconstruieste manual prin scriptul
+    `scripts/build_legislation_index.py` — necesita embedder MiniLM, costisitor.
+
+    Body: {"titlu": "...", "sursa": "...", "continut": "...", "categorie": "..."}
+    """
+    import json
+    import os
+    from pathlib import Path
+
+    titlu = (payload.get("titlu") or "").strip()
+    continut = (payload.get("continut") or "").strip()
+    sursa = (payload.get("sursa") or "").strip()
+    categorie = (payload.get("categorie") or "altele").strip()
+
+    if not titlu or not continut:
+        raise HTTPException(status_code=400, detail="Titlu si continut obligatorii")
+
+    legislatie_dir = Path(os.getenv("TRAINING_DATA_PATH", "/app/training_data")) / "legislatie"
+    legislatie_dir.mkdir(parents=True, exist_ok=True)
+    target = legislatie_dir / "user_added.jsonl"
+
+    entry = {
+        "source": f"{titlu} ({sursa})" if sursa else titlu,
+        "text": continut,
+        "category": categorie,
+    }
+    with target.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+    return {
+        "status": "ok",
+        "file": str(target),
+        "message": (
+            "Articol adaugat in corpusul Djarvis. Pentru ca raspunsurile sa il foloseasca, "
+            "ruleaza `docker exec ai_contabil_ai_service python scripts/build_legislation_index.py` "
+            "ca sa reconstruiesti indexul FAISS."
+        ),
+    }
 
 
 @router.get("/health")

@@ -5,7 +5,7 @@ import os
 
 from app.core.config import settings
 from app.core.database import engine, Base
-from app.api.routes import auth, users, documents, reports, notifications, training, chat, two_factor, qr_login, rapoarte_sfs, admin_dashboard, public_content
+from app.api.routes import auth, users, documents, reports, notifications, training, chat, two_factor, qr_login, rapoarte_sfs, admin_dashboard, public_content, contabil_dashboard, consultations
 
 # Import all models so they are registered with Base
 from app.models import (  # noqa: F401
@@ -14,6 +14,7 @@ from app.models import (  # noqa: F401
     model_version, audit_log, document_embedding, faq,
     two_factor as two_factor_model, login_attempt, qr_login as qr_login_model,
     public_content as public_content_model,
+    consultation_request as consultation_request_model,
 )
 
 # Create tables (in production use Alembic migrations, skip in testing)
@@ -67,6 +68,8 @@ app.include_router(qr_login.router, prefix="/api/v1/ac")
 app.include_router(rapoarte_sfs.router, prefix="/api/v1/ac")
 app.include_router(admin_dashboard.router, prefix="/api/v1/ac")
 app.include_router(public_content.router, prefix="/api/v1/ac")
+app.include_router(contabil_dashboard.router, prefix="/api/v1/ac")
+app.include_router(consultations.router, prefix="/api/v1/ac")
 
 
 @app.get("/api/v1/ac/health")

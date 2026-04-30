@@ -76,3 +76,61 @@ export const fetchSystemHealth = () =>
 
 export const fetchAuditLog = (limit = 5) =>
   apiRequest<AuditLogEntry[]>(`/admin/dashboard/audit-log?limit=${limit}`);
+
+// === AI service training & audit actions ===
+
+export interface TrainingTriggerResponse {
+  task_id: string;
+  model_name: string;
+  status: string;
+  message: string;
+}
+
+export const triggerTraining = (modelName: 'classifier' | 'ner') =>
+  aiServiceRequest<TrainingTriggerResponse>(
+    `/training/trigger?model_name=${modelName}`,
+    { method: 'POST' },
+  );
+
+export const verifyAuditChain = () =>
+  aiServiceRequest<{ valid: boolean; total: number; broken_at?: number; message?: string }>(
+    '/admin/audit/verify',
+  );
+
+// === Staff activity (admin monitoring contabili + receptionisti) ===
+
+export interface StaffContabilStat {
+  id: string;
+  username: string;
+  full_name: string | null;
+  is_active: boolean;
+  last_login: string | null;
+  clienti_asignati: number;
+  documente_aprobate: number;
+  documente_in_lucru: number;
+  rapoarte_create: number;
+  chat_raspunse: number;
+}
+
+export interface StaffReceptionistStat {
+  id: string;
+  username: string;
+  full_name: string | null;
+  is_active: boolean;
+  last_login: string | null;
+  cereri_preluate: number;
+  cereri_inchise: number;
+  chat_raspunse: number;
+}
+
+export interface StaffActivityResponse {
+  contabili: StaffContabilStat[];
+  receptionisti: StaffReceptionistStat[];
+  consultatii: {
+    total: number;
+    by_status: Record<string, number>;
+  };
+}
+
+export const fetchStaffActivity = () =>
+  apiRequest<StaffActivityResponse>('/admin/dashboard/staff-activity');

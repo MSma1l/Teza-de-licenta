@@ -306,7 +306,7 @@ def submit_correction(
     document_id: str,
     correction: dict,
     db: Session = Depends(get_db),
-    user: User = Depends(require_role("super_admin", "admin")),
+    user: User = Depends(require_role("super_admin", "admin", "contabil")),
 ):
     """
     Trimite corecții pentru un document.
@@ -382,7 +382,7 @@ def submit_correction(
 def confirm_document(
     document_id: str,
     db: Session = Depends(get_db),
-    user: User = Depends(require_role("super_admin", "admin")),
+    user: User = Depends(require_role("super_admin", "admin", "contabil")),
 ):
     """Confirmă că OCR + clasificare + extracție sunt corecte (positive training example)."""
     doc = db.query(Document).filter(Document.id == document_id).first()

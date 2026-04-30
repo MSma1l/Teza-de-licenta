@@ -15,6 +15,7 @@ import Navbar from '../../components/Navbar/Navbar';
 import {
   listUsers,
   createContabil,
+  createReceptionist,
   changeUserRole,
   type UserListResponse,
 } from '../../api/usersApi';
@@ -27,9 +28,10 @@ import {
   type PublicContent,
   type PublicContentType,
 } from '../../api/publicContentApi';
+import { triggerTraining, verifyAuditChain, fetchAuditLog, fetchStaffActivity, type StaffActivityResponse } from '../../api/adminDashboardApi';
 import UserDetailModal from '../../components/UserDetailModal/UserDetailModal';
 
-type AdminTab = 'utilizatori' | 'antrenare' | 'lege' | 'public' | 'audit';
+type AdminTab = 'utilizatori' | 'echipa' | 'antrenare' | 'lege' | 'public' | 'audit';
 
 const Admin = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -57,6 +59,7 @@ const Admin = () => {
         <div className="flex gap-1 border-b border-neutral-200 mb-6 overflow-x-auto">
           {([
             { id: 'utilizatori', label: 'Utilizatori', icon: '👥' },
+            { id: 'echipa', label: 'Echipa', icon: '📊' },
             { id: 'antrenare', label: 'Antrenare AI', icon: '🧠' },
             { id: 'lege', label: 'Adauga lege (RAG)', icon: '📜' },
             { id: 'public', label: 'Continut public', icon: '🌐' },
@@ -78,6 +81,7 @@ const Admin = () => {
         </div>
 
         {tab === 'utilizatori' && <TabUtilizatori />}
+        {tab === 'echipa' && <TabEchipa />}
         {tab === 'antrenare' && <TabAntrenare />}
         {tab === 'lege' && <TabLege />}
         {tab === 'public' && <TabContinutPublic />}
@@ -90,7 +94,7 @@ const Admin = () => {
 /* ============================================
    TAB 1 — Utilizatori (logica existenta)
    ============================================ */
-type Filter = '' | 'admin' | 'contabil' | 'client';
+type Filter = '' | 'admin' | 'contabil' | 'receptionist' | 'client';
 
 function TabUtilizatori() {
   const [users, setUsers] = useState<UserData[]>([]);
@@ -103,6 +107,7 @@ function TabUtilizatori() {
   const [userDetaliu, setUserDetaliu] = useState<UserData | null>(null);
 
   const [dialogDeschis, setDialogDeschis] = useState(false);
+  const [formRol, setFormRol] = useState<'contabil' | 'receptionist'>('contabil');
   const [formUsername, setFormUsername] = useState('');
   const [formEmail, setFormEmail] = useState('');
   const [formParola, setFormParola] = useState('');
@@ -137,12 +142,15 @@ function TabUtilizatori() {
     }
     setFormSeTrimite(true);
     try {
-      const newUser = await createContabil({
+      const payload = {
         username: formUsername.trim(),
         email: formEmail.trim(),
         password: formParola,
         full_name: formNume.trim() || undefined,
-      });
+      };
+      const newUser = formRol === 'receptionist'
+        ? await createReceptionist(payload)
+        : await createContabil(payload);
       setDialogDeschis(false);
       setFormUsername('');
       setFormEmail('');
@@ -169,7 +177,7 @@ function TabUtilizatori() {
     }
   }
 
-  async function schimbaRol(userId: string, rolNou: 'admin' | 'contabil' | 'client') {
+  async function schimbaRol(userId: string, rolNou: 'admin' | 'contabil' | 'receptionist' | 'client') {
     try {
       await changeUserRole(userId, rolNou);
       await incarcaLista();
@@ -189,12 +197,12 @@ function TabUtilizatori() {
           onClick={() => setDialogDeschis(true)}
           className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-full shadow-md transition"
         >
-          + Creeaza contabil nou
+          + Creeaza membru nou (contabil / receptionist)
         </button>
       </div>
 
       <div className="flex gap-2 flex-wrap mb-4">
-        {(['', 'admin', 'contabil', 'client'] as Filter[]).map((f) => (
+        {(['', 'admin', 'contabil', 'receptionist', 'client'] as Filter[]).map((f) => (
           <button
             key={f || 'all'}
             onClick={() => setFiltru(f)}
@@ -262,12 +270,35 @@ function TabUtilizatori() {
       {dialogDeschis && (
         <div className="fixed inset-0 bg-black/45 z-50 flex items-center justify-center p-4" onClick={() => setDialogDeschis(false)}>
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-xl font-bold text-neutral-900 mb-1">Creeaza contabil nou</h2>
-            <p className="text-sm text-neutral-600 mb-5">Noul cont va primi rolul CONTABIL direct.</p>
+            <h2 className="text-xl font-bold text-neutral-900 mb-1">Creeaza membru nou</h2>
+            <p className="text-sm text-neutral-600 mb-5">Alege rolul si completeaza datele.</p>
 
             <form onSubmit={salveazaContabil} className="space-y-3">
-              <Camp label="Username *" value={formUsername} onChange={setFormUsername} placeholder="ex: popescu_ion" required />
-              <Camp label="Email *" value={formEmail} onChange={setFormEmail} placeholder="contabil@firma.md" type="email" required />
+              {/* Selector rol */}
+              <div>
+                <label className="block text-xs font-semibold text-neutral-600 uppercase mb-1">Rol *</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {(['contabil', 'receptionist'] as const).map((r) => (
+                    <button
+                      type="button"
+                      key={r}
+                      onClick={() => setFormRol(r)}
+                      className={`px-3 py-2 rounded-md text-sm font-semibold transition ${
+                        formRol === r
+                          ? r === 'contabil'
+                            ? 'bg-sky-600 text-white'
+                            : 'bg-violet-600 text-white'
+                          : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+                      }`}
+                    >
+                      {r === 'contabil' ? '💼 Contabil' : '📞 Receptionist'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <Camp label="Username *" value={formUsername} onChange={setFormUsername} placeholder={formRol === 'contabil' ? 'ex: popescu_ion' : 'ex: receptionist_ana'} required />
+              <Camp label="Email *" value={formEmail} onChange={setFormEmail} placeholder={`${formRol}@firma.md`} type="email" required />
               <Camp label="Nume complet" value={formNume} onChange={setFormNume} placeholder="Ion Popescu" />
               <Camp label="Parola *" value={formParola} onChange={setFormParola} placeholder="min 8 caractere" type="password" required />
 
@@ -278,7 +309,7 @@ function TabUtilizatori() {
                   Anuleaza
                 </button>
                 <button type="submit" disabled={formSeTrimite} className="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold disabled:opacity-60">
-                  {formSeTrimite ? 'Se creeaza...' : 'Creeaza contabil'}
+                  {formSeTrimite ? 'Se creeaza...' : `Creeaza ${formRol}`}
                 </button>
               </div>
             </form>
@@ -301,6 +332,8 @@ function TabAntrenare() {
   const [models, setModels] = useState<Awaited<ReturnType<typeof fetchModels>>>([]);
   const [loading, setLoading] = useState(true);
   const [eroare, setEroare] = useState<string | null>(null);
+  const [trainingStarted, setTrainingStarted] = useState<{ kind: 'classifier' | 'ner'; msg: string } | null>(null);
+  const [trainingBusy, setTrainingBusy] = useState<'classifier' | 'ner' | null>(null);
 
   useEffect(() => {
     Promise.all([fetchTrainingStats(), fetchModels()])
@@ -311,6 +344,20 @@ function TabAntrenare() {
       .catch((e) => setEroare(e instanceof Error ? e.message : 'Eroare incarcare antrenare'))
       .finally(() => setLoading(false));
   }, []);
+
+  async function lanseazaAntrenare(kind: 'classifier' | 'ner') {
+    if (!confirm(`Lansez antrenarea modelului "${kind}"? Procesul ruleaza in fundal pe Celery.`)) return;
+    setTrainingBusy(kind);
+    setTrainingStarted(null);
+    try {
+      const r = await triggerTraining(kind);
+      setTrainingStarted({ kind, msg: `${r.message} Verifica progresul in audit log sau in tabelul versiunilor.` });
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Eroare la lansare antrenare');
+    } finally {
+      setTrainingBusy(null);
+    }
+  }
 
   if (loading) return <p className="text-sm text-neutral-500">Se incarca metricile...</p>;
   if (eroare) return <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-3">{eroare}</div>;
@@ -347,22 +394,39 @@ function TabAntrenare() {
           </div>
           <div className="flex gap-2">
             <button
-              disabled={!stats?.can_retrain_classifier}
+              onClick={() => lanseazaAntrenare('classifier')}
+              disabled={!stats?.can_retrain_classifier || trainingBusy !== null}
               className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-md disabled:opacity-50"
+              title={
+                stats?.can_retrain_classifier
+                  ? 'Lanseaza task Celery pentru reantrenarea clasificatorului BERT'
+                  : `Necesar ${stats?.min_required_for_training} corectii de tip — actual: ${stats?.type_corrections ?? 0}`
+              }
             >
-              Reantreneaza clasificator
+              {trainingBusy === 'classifier' ? '⏳ Lansez...' : 'Reantreneaza clasificator'}
             </button>
             <button
-              disabled={!stats?.can_retrain_ner}
+              onClick={() => lanseazaAntrenare('ner')}
+              disabled={!stats?.can_retrain_ner || trainingBusy !== null}
               className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-md disabled:opacity-50"
+              title={
+                stats?.can_retrain_ner
+                  ? 'Lanseaza task Celery pentru reantrenarea modelului NER'
+                  : `Necesar ${stats?.min_required_for_training} corectii de entitati — actual: ${stats?.entity_corrections ?? 0}`
+              }
             >
-              Reantreneaza NER
+              {trainingBusy === 'ner' ? '⏳ Lansez...' : 'Reantreneaza NER'}
             </button>
           </div>
         </div>
         {stats && stats.unused_examples < stats.min_required_for_training && (
           <div className="mt-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
             Necesar minim: {stats.min_required_for_training} exemple noi. Actual: {stats.unused_examples}.
+          </div>
+        )}
+        {trainingStarted && (
+          <div className="mt-3 text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 rounded p-2">
+            ✓ {trainingStarted.msg}
           </div>
         )}
       </div>
@@ -436,12 +500,11 @@ function TabLege() {
     setSalveaza(true);
     setFeedback(null);
     try {
-      // Endpoint backend pentru adaugare in RAG inca nu e expus public.
-      // Dupa salvare, indexul FAISS al lui Djarvis trebuie regenerat
-      // (script: backend-project/ai-service/scripts/build_legislation_index.py).
-      const res = await fetch('/api/v1/agent/legislatie/add', {
+      // Endpoint pe AI service (port 3778). Persistat in user_added.jsonl;
+      // FAISS se reconstruieste manual cu scripts/build_legislation_index.py.
+      const aiBase = import.meta.env.VITE_AI_SERVICE_URL || 'http://localhost:3778/api/v1';
+      const res = await fetch(`${aiBase}/agent/legislatie/add`, {
         method: 'POST',
-        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('access_token')}`,
@@ -449,15 +512,14 @@ function TabLege() {
         body: JSON.stringify({ titlu, sursa, continut, categorie }),
       });
       if (res.ok) {
-        setFeedback('Articolul a fost adaugat in corpusul Djarvis. Indexul FAISS va fi reconstruit automat.');
+        const data = await res.json();
+        setFeedback(data.message || 'Articol adaugat in corpusul Djarvis.');
         setTitlu('');
         setSursa('');
         setContinut('');
       } else {
-        setFeedback(
-          'Acest endpoint inca nu este expus public. Articolul trebuie adaugat manual in ' +
-          '"backend-project/training-data/legislatie" si rulat scriptul de reconstructie a indexului FAISS.',
-        );
+        const err = await res.json().catch(() => ({}));
+        setFeedback(`Eroare: ${err.detail || res.statusText}`);
       }
     } catch (e) {
       setFeedback(e instanceof Error ? e.message : 'Eroare salvare');
@@ -556,6 +618,47 @@ function TabLege() {
    TAB 4 — Audit log
    ============================================ */
 function TabAudit() {
+  const [intrari, setIntrari] = useState<Awaited<ReturnType<typeof fetchAuditLog>>>([]);
+  const [loading, setLoading] = useState(true);
+  const [eroare, setEroare] = useState<string | null>(null);
+
+  const [verificare, setVerificare] = useState<{ valid: boolean; message: string } | null>(null);
+  const [verifica, setVerifica] = useState(false);
+
+  const reincarca = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await fetchAuditLog(50);
+      setIntrari(data);
+    } catch (e) {
+      setEroare(e instanceof Error ? e.message : 'Eroare incarcare audit');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    reincarca();
+  }, [reincarca]);
+
+  async function verificaIntegritate() {
+    setVerifica(true);
+    setVerificare(null);
+    try {
+      const r = await verifyAuditChain();
+      setVerificare({
+        valid: r.valid,
+        message: r.valid
+          ? `✓ Lant intact. ${r.total} intrari verificate.`
+          : `⚠ Lant rupt la pozitia ${r.broken_at}. ${r.message || ''}`,
+      });
+    } catch (e) {
+      setVerificare({ valid: false, message: e instanceof Error ? e.message : 'Eroare verificare' });
+    } finally {
+      setVerifica(false);
+    }
+  }
+
   return (
     <div>
       <h2 className="text-xl font-bold text-neutral-900 mb-1">Jurnal de audit</h2>
@@ -565,26 +668,79 @@ function TabAudit() {
         subsecvente, devenind imediat detectabila.
       </p>
 
-      <div className="bg-white rounded-xl border border-neutral-200 p-6 text-center">
-        <div className="text-4xl mb-3">🔒</div>
-        <p className="text-neutral-700 font-semibold mb-1">Vizualizatorul de audit log</p>
-        <p className="text-sm text-neutral-500 mb-4">
-          Endpoint-ul GET /audit/ va fi expus dupa expunerea formala a interfetei catre
-          administrator. Va include filtrare dupa utilizator, tip actiune, interval temporal si
-          verificare automata a integritatii lantului de hash-uri.
-        </p>
-
-        <div className="text-left bg-neutral-50 rounded-md p-3 font-mono text-xs text-neutral-600 mt-4">
-          <div>[2026-04-28 09:48] CONTABIL maria.popescu  ASSIGN_CLIENT     hash: a3f2b91c...</div>
-          <div>[2026-04-28 09:22] CLIENT   client_test     UPLOAD_DOCUMENT   hash: 8e1d44a0...</div>
-          <div>[2026-04-28 09:21] CLIENT   client_test     LOGIN_SUCCESS     hash: f7c9023e...</div>
-          <div>[2026-04-28 09:15] ADMIN    admin           CREATE_USER       hash: 2b6e88f1...</div>
-          <div>[2026-04-28 09:14] ADMIN    admin           LOGIN_SUCCESS     hash: 5d84a2b3...</div>
+      <div className="bg-white rounded-xl border border-neutral-200 p-5">
+        <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
+          <h3 className="font-bold text-neutral-900">Ultimele 50 actiuni inregistrate</h3>
+          <div className="flex gap-2">
+            <button
+              onClick={reincarca}
+              disabled={loading}
+              className="text-xs px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 rounded-md font-semibold text-neutral-700 disabled:opacity-50"
+            >
+              {loading ? 'Se incarca...' : '🔄 Refresh'}
+            </button>
+            <button
+              onClick={verificaIntegritate}
+              disabled={verifica}
+              className="text-xs px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-md disabled:opacity-50"
+            >
+              {verifica ? 'Verific...' : '🔒 Verifica integritate'}
+            </button>
+          </div>
         </div>
 
-        <button className="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-md">
-          Verifica integritatea lantului
-        </button>
+        {verificare && (
+          <div
+            className={`text-sm border rounded-md p-3 mb-3 ${
+              verificare.valid
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                : 'bg-red-50 border-red-200 text-red-800'
+            }`}
+          >
+            {verificare.message}
+          </div>
+        )}
+
+        {eroare && (
+          <div className="text-sm bg-red-50 border border-red-200 text-red-700 rounded-md p-3 mb-3">
+            {eroare}
+          </div>
+        )}
+
+        {intrari.length === 0 ? (
+          <p className="text-sm text-neutral-500 italic py-6 text-center">
+            Niciuna actiune inregistrata in jurnal inca.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs font-mono">
+              <thead className="bg-neutral-50 border-b border-neutral-200">
+                <tr>
+                  <th className="text-left px-3 py-2 font-semibold">Timestamp</th>
+                  <th className="text-left px-3 py-2 font-semibold">Actiune</th>
+                  <th className="text-left px-3 py-2 font-semibold">User</th>
+                  <th className="text-left px-3 py-2 font-semibold">Document</th>
+                  <th className="text-left px-3 py-2 font-semibold">IP</th>
+                  <th className="text-left px-3 py-2 font-semibold">Hash</th>
+                </tr>
+              </thead>
+              <tbody>
+                {intrari.map((e) => (
+                  <tr key={e.id} className="border-b border-neutral-100">
+                    <td className="px-3 py-2 text-neutral-500 whitespace-nowrap">
+                      {e.timestamp ? new Date(e.timestamp).toLocaleString('ro') : '—'}
+                    </td>
+                    <td className="px-3 py-2 font-bold text-indigo-700">{e.action_type}</td>
+                    <td className="px-3 py-2 text-neutral-700">{e.user_id?.slice(0, 8) || '—'}</td>
+                    <td className="px-3 py-2 text-neutral-500">{e.document_id?.slice(0, 8) || '—'}</td>
+                    <td className="px-3 py-2 text-neutral-500">{e.ip_address || '—'}</td>
+                    <td className="px-3 py-2 text-neutral-400">{e.entry_hash.slice(0, 12)}…</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -598,6 +754,7 @@ function rolBadge(rol: string): string {
   const r = rol.toLowerCase();
   if (r === 'admin' || r === 'super_admin') return 'bg-purple-100 text-purple-800';
   if (r === 'contabil') return 'bg-sky-100 text-sky-800';
+  if (r === 'receptionist') return 'bg-violet-100 text-violet-800';
   return 'bg-neutral-100 text-neutral-700';
 }
 
@@ -606,16 +763,17 @@ function SchimbaRolDropdown({
   onChange,
 }: {
   currentRole: string;
-  onChange: (role: 'admin' | 'contabil' | 'client') => void;
+  onChange: (role: 'admin' | 'contabil' | 'receptionist' | 'client') => void;
 }) {
   return (
     <select
       value={currentRole.toLowerCase()}
-      onChange={(e) => onChange(e.target.value as 'admin' | 'contabil' | 'client')}
+      onChange={(e) => onChange(e.target.value as 'admin' | 'contabil' | 'receptionist' | 'client')}
       className="text-sm border border-neutral-300 rounded-md px-2 py-1 bg-white hover:border-indigo-400"
     >
       <option value="client">client</option>
       <option value="contabil">contabil</option>
+      <option value="receptionist">receptionist</option>
       <option value="admin">admin</option>
     </select>
   );
@@ -656,6 +814,141 @@ function CardStat({ label, value }: { label: string; value: number | string }) {
     <div className="bg-white rounded-lg border border-neutral-200 p-4">
       <div className="text-xs uppercase font-semibold text-neutral-500 mb-1">{label}</div>
       <div className="text-2xl font-bold text-neutral-900">{value}</div>
+    </div>
+  );
+}
+
+/* ============================================
+   TAB — Echipa (monitorizare contabili + receptionisti)
+   ============================================ */
+function TabEchipa() {
+  const [data, setData] = useState<StaffActivityResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [eroare, setEroare] = useState<string | null>(null);
+
+  const reload = useCallback(() => {
+    setLoading(true);
+    fetchStaffActivity()
+      .then(setData)
+      .catch((e) => setEroare(e instanceof Error ? e.message : 'Eroare incarcare'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => { reload(); }, [reload]);
+
+  if (loading) return <p className="text-sm text-neutral-500">Se incarca activitatea echipei...</p>;
+  if (eroare) return <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-3">{eroare}</div>;
+  if (!data) return null;
+
+  const consultatiiNoi = data.consultatii.by_status?.['noua'] || 0;
+  const consultatiiInchise = (data.consultatii.by_status?.['inchis_ok'] || 0) + (data.consultatii.by_status?.['inchis_respins'] || 0);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-baseline gap-2">
+        <div>
+          <h2 className="text-xl font-bold text-neutral-900 mb-1">Activitate echipa</h2>
+          <p className="text-sm text-neutral-600">
+            Monitorizare in timp real a productivitatii contabililor si receptionistilor.
+          </p>
+        </div>
+        <button
+          onClick={reload}
+          className="text-xs px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 rounded-md font-semibold text-neutral-700"
+        >
+          🔄 Refresh
+        </button>
+      </div>
+
+      {/* Sumar consultatii */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <CardStat label="Consultatii total" value={data.consultatii.total} />
+        <CardStat label="Cereri noi" value={consultatiiNoi} />
+        <CardStat label="Cereri inchise" value={consultatiiInchise} />
+        <CardStat label="Echipa activa" value={data.contabili.length + data.receptionisti.length} />
+      </div>
+
+      {/* Tabel contabili */}
+      <section className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+        <header className="px-5 py-3 border-b border-neutral-200 bg-neutral-50">
+          <h3 className="font-bold text-neutral-900">Contabili ({data.contabili.length})</h3>
+          <p className="text-xs text-neutral-500">Activitate pe documente, rapoarte si chat</p>
+        </header>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-neutral-50">
+              <tr>
+                <th className="text-left px-4 py-2 font-semibold text-neutral-700">Contabil</th>
+                <th className="text-right px-3 py-2 font-semibold text-neutral-700">Clienti</th>
+                <th className="text-right px-3 py-2 font-semibold text-neutral-700">Doc aprobate</th>
+                <th className="text-right px-3 py-2 font-semibold text-neutral-700">Doc in lucru</th>
+                <th className="text-right px-3 py-2 font-semibold text-neutral-700">Rapoarte</th>
+                <th className="text-right px-3 py-2 font-semibold text-neutral-700">Chat</th>
+                <th className="text-left px-3 py-2 font-semibold text-neutral-700">Ultim login</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.contabili.length === 0 ? (
+                <tr><td colSpan={7} className="px-4 py-6 text-center text-neutral-500">Niciun contabil inregistrat.</td></tr>
+              ) : data.contabili.map((c) => (
+                <tr key={c.id} className="border-t border-neutral-100">
+                  <td className="px-4 py-2">
+                    <div className="font-semibold text-neutral-900">{c.full_name || c.username}</div>
+                    <div className="text-xs text-neutral-500">@{c.username}</div>
+                  </td>
+                  <td className="px-3 py-2 text-right font-bold text-neutral-900">{c.clienti_asignati}</td>
+                  <td className="px-3 py-2 text-right text-emerald-700 font-bold">{c.documente_aprobate}</td>
+                  <td className="px-3 py-2 text-right text-amber-700 font-bold">{c.documente_in_lucru}</td>
+                  <td className="px-3 py-2 text-right text-neutral-700">{c.rapoarte_create}</td>
+                  <td className="px-3 py-2 text-right text-neutral-700">{c.chat_raspunse}</td>
+                  <td className="px-3 py-2 text-xs text-neutral-500">
+                    {c.last_login ? new Date(c.last_login).toLocaleString('ro') : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* Tabel receptionisti */}
+      <section className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+        <header className="px-5 py-3 border-b border-neutral-200 bg-neutral-50">
+          <h3 className="font-bold text-neutral-900">Receptionisti ({data.receptionisti.length})</h3>
+          <p className="text-xs text-neutral-500">Activitate pe consultatii + chat escaladat</p>
+        </header>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-neutral-50">
+              <tr>
+                <th className="text-left px-4 py-2 font-semibold text-neutral-700">Receptionist</th>
+                <th className="text-right px-3 py-2 font-semibold text-neutral-700">Cereri preluate</th>
+                <th className="text-right px-3 py-2 font-semibold text-neutral-700">Cereri inchise</th>
+                <th className="text-right px-3 py-2 font-semibold text-neutral-700">Chat raspunse</th>
+                <th className="text-left px-3 py-2 font-semibold text-neutral-700">Ultim login</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.receptionisti.length === 0 ? (
+                <tr><td colSpan={5} className="px-4 py-6 text-center text-neutral-500">Niciun receptionist inregistrat.</td></tr>
+              ) : data.receptionisti.map((r) => (
+                <tr key={r.id} className="border-t border-neutral-100">
+                  <td className="px-4 py-2">
+                    <div className="font-semibold text-neutral-900">{r.full_name || r.username}</div>
+                    <div className="text-xs text-neutral-500">@{r.username}</div>
+                  </td>
+                  <td className="px-3 py-2 text-right font-bold text-neutral-900">{r.cereri_preluate}</td>
+                  <td className="px-3 py-2 text-right text-emerald-700 font-bold">{r.cereri_inchise}</td>
+                  <td className="px-3 py-2 text-right text-neutral-700">{r.chat_raspunse}</td>
+                  <td className="px-3 py-2 text-xs text-neutral-500">
+                    {r.last_login ? new Date(r.last_login).toLocaleString('ro') : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   );
 }

@@ -45,6 +45,13 @@ _SEED_USERS = [
         "role": UserRole.CONTABIL,
     },
     {
+        "username": "receptionist",
+        "email": "receptionist@aicontabil.md",
+        "password": "Receptionist1234!",
+        "full_name": "Receptionist Demo",
+        "role": UserRole.RECEPTIONIST,
+    },
+    {
         "username": "client",
         "email": "client@aicontabil.md",
         "password": "Client1234!",

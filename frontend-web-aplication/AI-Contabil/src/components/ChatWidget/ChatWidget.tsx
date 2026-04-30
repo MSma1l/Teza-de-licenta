@@ -4,7 +4,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import SendIcon from '@mui/icons-material/Send';
 import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
-import { sendChatMessage, fetchSuggestions, type ChatMessage, type Suggestion } from '../../api/chatApi';
+import { sendChatMessage, fetchSuggestions, getConversation, type ChatMessage, type Suggestion } from '../../api/chatApi';
 import { useLanguage } from '../../context/LanguageContext';
 import type { Lang } from '../../context/LanguageContext';
 
@@ -60,8 +60,39 @@ const ChatWidget = () => {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(true);
+  const [isEscalated, setIsEscalated] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Poll pentru mesaje noi (de la contabil) cand conversatia e escalada si deschisa
+  useEffect(() => {
+    if (!open || !conversationId || !isEscalated) return;
+    const interval = setInterval(async () => {
+      try {
+        const convo = await getConversation(conversationId);
+        const newOnes = convo.messages.filter((m) => {
+          const isNew = !messages.some((existing) => existing.id === m.id);
+          return isNew && (m.sender_type === 'contabil' || m.sender_type === 'ai');
+        });
+        if (newOnes.length > 0) {
+          setMessages((prev) => [
+            ...prev,
+            ...newOnes.map((m) => ({
+              id: m.id,
+              sender: m.sender_type,
+              text: m.content,
+              confidence: m.confidence,
+              time: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            })),
+          ]);
+        }
+        if (convo.is_resolved) setIsEscalated(false);
+      } catch {
+        // Tacem — polling nu e critic
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [open, conversationId, isEscalated, messages]);
 
   // Greeting message + starter suggestions on first open
   useEffect(() => {
@@ -108,21 +139,37 @@ const ChatWidget = () => {
       const response: ChatMessage = await sendChatMessage(text, conversationId || undefined);
       if (!conversationId) setConversationId(response.conversation_id);
 
-      setMessages((prev) => [...prev, {
-        id: response.id,
-        sender: response.sender_type,
-        text: response.content,
-        confidence: response.confidence,
-        time: new Date(response.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      }]);
+      // Daca conversatia e escaladata si raspunsul e clientul propriu (eco) →
+      // suntem in modul "asteapta contabilul" (mesajul a fost salvat fara reply AI)
+      if (isEscalated && response.sender_type === 'client') {
+        // Nu adaugam — mesajul propriu e deja afisat din optimistic update
+      } else {
+        setMessages((prev) => [...prev, {
+          id: response.id,
+          sender: response.sender_type,
+          text: response.content,
+          confidence: response.confidence,
+          time: new Date(response.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        }]);
+      }
+
+      // Detect escalation: backend trimite text "Am creat o solicitare pentru contabilul tau"
+      if (
+        response.sender_type === 'ai' &&
+        response.content.toLowerCase().includes('contabilul tau')
+      ) {
+        setIsEscalated(true);
+      }
 
       // Dupa raspuns, refresh suggestions cu context (intrebari relate)
-      fetchSuggestions(text)
-        .then((s) => {
-          setSuggestions(s);
-          setShowSuggestions(true);
-        })
-        .catch(() => setSuggestions([]));
+      if (!isEscalated) {
+        fetchSuggestions(text)
+          .then((s) => {
+            setSuggestions(s);
+            setShowSuggestions(true);
+          })
+          .catch(() => setSuggestions([]));
+      }
     } catch {
       setMessages((prev) => [...prev, {
         id: `error-${Date.now()}`,
@@ -154,15 +201,23 @@ const ChatWidget = () => {
           {/* Header */}
           <div
             className="flex items-center justify-between px-5 py-4 text-white flex-shrink-0"
-            style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #0ea5e9 100%)' }}
+            style={{
+              background: isEscalated
+                ? 'linear-gradient(135deg, #059669 0%, #0ea5e9 100%)'
+                : 'linear-gradient(135deg, #4f46e5 0%, #0ea5e9 100%)',
+            }}
           >
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
-                <SmartToyOutlinedIcon style={{ fontSize: 20 }} />
+                {isEscalated
+                  ? <PersonOutlineIcon style={{ fontSize: 20 }} />
+                  : <SmartToyOutlinedIcon style={{ fontSize: 20 }} />}
               </div>
               <div>
-                <h3 className="text-sm font-bold">{tr.title}</h3>
-                <p className="text-[11px] opacity-80">{tr.subtitle}</p>
+                <h3 className="text-sm font-bold">{isEscalated ? 'Chat cu contabilul' : tr.title}</h3>
+                <p className="text-[11px] opacity-80">
+                  {isEscalated ? 'Conversație preluată de un specialist' : tr.subtitle}
+                </p>
               </div>
             </div>
             <button
@@ -172,6 +227,14 @@ const ChatWidget = () => {
               <CloseIcon style={{ fontSize: 18 }} />
             </button>
           </div>
+
+          {/* Banner escaladare */}
+          {isEscalated && (
+            <div className="bg-emerald-50 border-b border-emerald-200 px-4 py-2 text-xs text-emerald-800 flex-shrink-0">
+              💼 Întrebarea ta a fost trimisă unui contabil. Răspunsul apare aici imediat ce e gata —
+              poți continua să scrii în acest chat.
+            </div>
+          )}
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-[#f8fafc]">

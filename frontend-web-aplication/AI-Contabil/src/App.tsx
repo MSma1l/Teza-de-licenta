@@ -10,6 +10,8 @@ import Reports from './pages/Reports/Reports';
 import Admin from './pages/Admin/Admin';
 import AdminDashboard from './pages/AdminDashboard/AdminDashboard';
 import Contabil from './pages/Contabil/Contabil';
+import ContabilDashboard from './pages/ContabilDashboard/ContabilDashboard';
+import Receptionist from './pages/Receptionist/Receptionist';
 import ErrorBoundary from './components/ErrorBoundary/ErrorBoundary';
 import ChatWidget from './components/ChatWidget/ChatWidget';
 
@@ -45,11 +47,20 @@ function App() {
     );
   }
 
-  // Admin/super_admin logat → vede Dashboard-ul de admin in loc de landing-ul public
+  // Admin/super_admin → AdminDashboard, contabil → ContabilDashboard,
+  // receptionist → Receptionist (cu tab Overview integrat), restul → Home (landing)
   const role = (user?.role || '').toLowerCase();
   const isAdmin = isLoggedIn && (role === 'admin' || role === 'super_admin');
-  const homeElement = isAdmin ? <AdminDashboard /> : <Home isLoggedIn={isLoggedIn} />;
-  const homeAuthElement = isLoggedIn ? (isAdmin ? <AdminDashboard /> : <Home isLoggedIn={true} />) : <Navigate to="/signin" />;
+  const isContabil = isLoggedIn && role === 'contabil';
+  const isReceptionist = isLoggedIn && role === 'receptionist';
+
+  const dashboardForRole =
+    isAdmin ? <AdminDashboard />
+    : isContabil ? <ContabilDashboard />
+    : isReceptionist ? <Receptionist />
+    : null;
+  const homeElement = dashboardForRole || <Home isLoggedIn={isLoggedIn} />;
+  const homeAuthElement = isLoggedIn ? (dashboardForRole || <Home isLoggedIn={true} />) : <Navigate to="/signin" />;
 
   return (
     <LanguageProvider>
@@ -80,8 +91,20 @@ function App() {
               path="/contabil"
               element={
                 isLoggedIn ? (
-                  <RoleGuard allowed={['contabil', 'admin', 'super_admin']} userRole={user?.role}>
+                  <RoleGuard allowed={['contabil']} userRole={user?.role}>
                     <Contabil />
+                  </RoleGuard>
+                ) : (
+                  <Navigate to="/signin" />
+                )
+              }
+            />
+            <Route
+              path="/receptionist"
+              element={
+                isLoggedIn ? (
+                  <RoleGuard allowed={['receptionist']} userRole={user?.role}>
+                    <Receptionist />
                   </RoleGuard>
                 ) : (
                   <Navigate to="/signin" />

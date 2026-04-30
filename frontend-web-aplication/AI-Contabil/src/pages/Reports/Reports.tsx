@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Navbar from '../../components/Navbar/Navbar';
 import Footer from '../../components/Footer/Footer';
 import {
@@ -24,13 +25,19 @@ import UserPicker from '../../components/UserPicker/UserPicker';
 const Reports = () => {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
+  const isContabil = user?.role === 'contabil';
+
+  // Query params din URL (Contabil "Clientii mei" si "Rapoarte SFS")
+  const [searchParams] = useSearchParams();
+  const clientFromUrl = searchParams.get('client');
+  const tipFromUrl = (searchParams.get('tip') || '').toUpperCase();
 
   const [reports, setReports] = useState<ReportData[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState('');
+  const [filterType, setFilterType] = useState(tipFromUrl);
   const [filterStatus, setFilterStatus] = useState('');
   const [selectedReport, setSelectedReport] = useState<ReportData | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -44,13 +51,16 @@ const Reports = () => {
   const adminAccountantId = isAdmin && selectedUserId && isContabilSelected ? selectedUserId : undefined;
   const adminClientId = isAdmin && selectedUserId && !isContabilSelected ? selectedUserId : undefined;
 
+  // Contabil: cand vine din card client → ?client=<id> filtreaza rapoartele acelui client
+  const contabilClientId = isContabil && clientFromUrl ? clientFromUrl : undefined;
+
   const loadReports = async () => {
     setLoading(true);
     try {
       const data = await fetchReports({
         report_type: filterType || undefined,
         report_status: filterStatus || undefined,
-        client_id: adminClientId,
+        client_id: adminClientId || contabilClientId,
         accountant_id: adminAccountantId,
         limit: 100,
       });
@@ -65,7 +75,7 @@ const Reports = () => {
 
   useEffect(() => {
     loadReports();
-  }, [filterType, filterStatus, selectedUserId, selectedUserRole]);
+  }, [filterType, filterStatus, selectedUserId, selectedUserRole, clientFromUrl]);
 
   const handleDelete = async (id: string) => {
     try {
