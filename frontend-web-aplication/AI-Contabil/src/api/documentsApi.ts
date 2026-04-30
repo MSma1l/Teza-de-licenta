@@ -36,12 +36,16 @@ export interface UploadDocumentData {
 export async function fetchDocuments(params?: {
   document_type?: string;
   doc_status?: string;
+  owner_id?: string;
+  accountant_id?: string;
   skip?: number;
   limit?: number;
 }): Promise<DocumentListResponse> {
   const query = new URLSearchParams();
   if (params?.document_type) query.set('document_type', params.document_type);
   if (params?.doc_status) query.set('doc_status', params.doc_status);
+  if (params?.owner_id) query.set('owner_id', params.owner_id);
+  if (params?.accountant_id) query.set('accountant_id', params.accountant_id);
   if (params?.skip) query.set('skip', String(params.skip));
   if (params?.limit) query.set('limit', String(params.limit));
 

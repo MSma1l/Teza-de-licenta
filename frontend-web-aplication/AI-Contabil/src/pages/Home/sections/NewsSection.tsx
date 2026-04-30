@@ -1,7 +1,8 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import { useLanguage } from '../../../context/LanguageContext';
 import type { Lang } from '../../../context/LanguageContext';
+import { fetchPublicContent, type PublicContent } from '../../../api/publicContentApi';
 
 interface NewsItem {
   title: string;
@@ -158,6 +159,27 @@ const NewsSection = () => {
   const tr = t[lang];
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Stiri adaugate de admin din panou — apar primele in carusel
+  const [adminNews, setAdminNews] = useState<PublicContent[]>([]);
+  useEffect(() => {
+    fetchPublicContent('stire', 30)
+      .then((items) => setAdminNews(items))
+      .catch(() => setAdminNews([]));
+  }, []);
+
+  const adminAsNewsItems: NewsItem[] = adminNews.map((n) => ({
+    title: n.title,
+    summary: n.body,
+    date: new Date(n.published_date).toLocaleDateString('ro', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }),
+    tag: n.tag || 'Admin',
+    color: n.color || '#4f46e5',
+  }));
+  const allNews: NewsItem[] = [...adminAsNewsItems, ...tr.items];
+
   // Auto-scroll carousel
   useEffect(() => {
     const el = scrollRef.current;
@@ -201,7 +223,7 @@ const NewsSection = () => {
         ref={scrollRef}
         className="flex gap-5 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
       >
-        {tr.items.map((item, index) => (
+        {allNews.map((item, index) => (
           <article
             key={index}
             className="flex-[0_0_320px] max-md:flex-[0_0_85%] snap-start flex flex-col rounded-2xl border border-neutral-200 bg-white overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-xl group"

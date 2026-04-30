@@ -30,6 +30,7 @@ import HelpFaq from './sections/HelpFaq';
 
 /* Importăm tipurile */
 import type { SettingsSection } from '../../models/settingsTypes';
+import { useAuth } from '../../context/AuthContext';
 
 /* Maparea aliasilor URL (ce trimit alte componente) -> SettingsSection real.
    Acceptam si plurale ca "notifications" pentru ca url-urile sa fie naturale. */
@@ -51,17 +52,22 @@ function rezolvaSectiune(raw: string | null): SettingsSection {
 /* --- Componenta Settings --- */
 const Settings = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
 
   /* State pentru secțiunea activă din sidebar — initializat din ?tab= */
-  const [activeSection, setActiveSection] = useState<SettingsSection>(
-    rezolvaSectiune(searchParams.get('tab')),
-  );
+  const [activeSection, setActiveSection] = useState<SettingsSection>(() => {
+    const initial = rezolvaSectiune(searchParams.get('tab'));
+    // Admin nu are acces la Help — daca link-ul tinteste ?tab=help, cadem pe edit-profile
+    return isAdmin && initial === 'help' ? 'edit-profile' : initial;
+  });
 
   /* Re-sincronizam cand URL-ul se schimba (ex: utilizatorul navigheaza prin Navbar) */
   useEffect(() => {
     const noua = rezolvaSectiune(searchParams.get('tab'));
-    setActiveSection((prev) => (prev === noua ? prev : noua));
-  }, [searchParams]);
+    const efectiva = isAdmin && noua === 'help' ? 'edit-profile' : noua;
+    setActiveSection((prev) => (prev === efectiva ? prev : efectiva));
+  }, [searchParams, isAdmin]);
 
   /* Cand userul schimba tab-ul din sidebar, actualizam si URL-ul (fara reload) */
   const handleSectionChange = (s: SettingsSection) => {
@@ -79,7 +85,8 @@ const Settings = () => {
       case 'security':
         return <SecuritySettings />;
       case 'help':
-        return <HelpFaq />;
+        // Admin nu vede Help — fallback pe edit-profile
+        return isAdmin ? <EditProfile /> : <HelpFaq />;
       default:
         return <EditProfile />;
     }

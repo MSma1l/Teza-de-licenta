@@ -7,13 +7,14 @@ import HelpOutlineOutlinedIcon from '@mui/icons-material/HelpOutlineOutlined';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 
 import type { SettingsSection } from '../../models/settingsTypes';
+import { useAuth } from '../../context/AuthContext';
 
 interface SettingsSidebarProps {
   activeSection: SettingsSection;
   onSectionChange: (section: SettingsSection) => void;
 }
 
-const menuItems: { id: SettingsSection; label: string; icon: React.ReactNode }[] = [
+const allMenuItems: { id: SettingsSection; label: string; icon: React.ReactNode }[] = [
   { id: 'edit-profile', label: 'Edit profile', icon: <EditOutlinedIcon /> },
   { id: 'notification', label: 'Notification', icon: <NotificationsNoneOutlinedIcon /> },
   { id: 'security', label: 'Security', icon: <LockOutlinedIcon /> },
@@ -22,6 +23,11 @@ const menuItems: { id: SettingsSection; label: string; icon: React.ReactNode }[]
 
 const SettingsSidebar = ({ activeSection, onSectionChange }: SettingsSidebarProps) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  // Admin / super_admin nu au nevoie de Help — au panou dedicat
+  const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
+  const menuItems = isAdmin ? allMenuItems.filter((m) => m.id !== 'help') : allMenuItems;
 
   return (
     <aside className="w-[280px] min-w-[280px] border-r border-neutral-200 py-8 flex flex-col bg-white">

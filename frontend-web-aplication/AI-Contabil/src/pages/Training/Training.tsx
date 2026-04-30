@@ -40,7 +40,7 @@ export default function Training() {
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      <Navbar />
+      <Navbar isLoggedIn={true} showNavLinks={false} />
 
       <div className="flex-1 max-w-[1400px] mx-auto w-full px-8 py-6">
         {/* Header */}

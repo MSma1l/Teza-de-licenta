@@ -18,8 +18,13 @@ import SendIcon from '@mui/icons-material/Send';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import AlertToast from '../../components/AlertToast/AlertToast';
 import TwoFactorPrompt from '../../components/TwoFactorPrompt/TwoFactorPrompt';
+import { useAuth } from '../../context/AuthContext';
+import UserPicker from '../../components/UserPicker/UserPicker';
 
 const Reports = () => {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
+
   const [reports, setReports] = useState<ReportData[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -31,6 +36,13 @@ const Reports = () => {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [pendingDownload, setPendingDownload] = useState<ReportData | null>(null);
   const [twoFactorOpen, setTwoFactorOpen] = useState(false);
+  // Admin: filtru pe user (client sau contabil). null = vede tot.
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [selectedUserRole, setSelectedUserRole] = useState<string | null>(null);
+
+  const isContabilSelected = selectedUserRole === 'contabil';
+  const adminAccountantId = isAdmin && selectedUserId && isContabilSelected ? selectedUserId : undefined;
+  const adminClientId = isAdmin && selectedUserId && !isContabilSelected ? selectedUserId : undefined;
 
   const loadReports = async () => {
     setLoading(true);
@@ -38,6 +50,8 @@ const Reports = () => {
       const data = await fetchReports({
         report_type: filterType || undefined,
         report_status: filterStatus || undefined,
+        client_id: adminClientId,
+        accountant_id: adminAccountantId,
         limit: 100,
       });
       setReports(data.reports);
@@ -51,7 +65,7 @@ const Reports = () => {
 
   useEffect(() => {
     loadReports();
-  }, [filterType, filterStatus]);
+  }, [filterType, filterStatus, selectedUserId, selectedUserRole]);
 
   const handleDelete = async (id: string) => {
     try {
@@ -137,13 +151,27 @@ const Reports = () => {
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="font-[var(--font-heading)] text-2xl font-bold text-[var(--color-primary)]">
-              Rapoarte
+              {isAdmin && selectedUserId
+                ? isContabilSelected
+                  ? 'Rapoartele create de contabil'
+                  : 'Rapoartele clientului'
+                : 'Rapoarte'}
             </h1>
             <p className="text-[var(--color-neutral-400)] text-sm mt-1">
               {total} rapoarte
+              {isAdmin && !selectedUserId && ' (toți utilizatorii)'}
             </p>
           </div>
         </div>
+
+        {isAdmin && (
+          <UserPicker
+            selectedUserId={selectedUserId}
+            onChange={(id, role) => { setSelectedUserId(id); setSelectedUserRole(role || null); }}
+            roleFilter="non_admin"
+            label="Vezi rapoartele unui client sau cele create de un contabil"
+          />
+        )}
 
         {/* Search & Filters */}
         <div className="flex gap-3 mb-6 max-md:flex-col">

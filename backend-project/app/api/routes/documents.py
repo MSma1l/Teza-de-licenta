@@ -68,6 +68,8 @@ async def upload_document(
 def list_documents(
     document_type: str | None = None,
     doc_status: str | None = None,
+    owner_id: str | None = None,
+    accountant_id: str | None = None,
     skip: int = 0,
     limit: int = 50,
     current_user: User = Depends(get_current_user),
@@ -86,7 +88,21 @@ def list_documents(
         client_ids = [link.client_id for link in client_links]
         client_ids.append(current_user.id)
         query = query.filter(Document.owner_id.in_(client_ids))
-    # Admin vede tot
+    # Admin vede tot — dar poate filtra cu owner_id (un singur user)
+    # sau cu accountant_id (toti clientii unui contabil)
+
+    if current_user.role in (UserRole.ADMIN, UserRole.SUPER_ADMIN):
+        if accountant_id:
+            # Toate documentele clientilor asignati la acest contabil
+            client_links = db.query(AccountantClient.client_id).filter(
+                AccountantClient.accountant_id == accountant_id,
+                AccountantClient.is_active == True,
+            ).all()
+            client_ids = [link.client_id for link in client_links]
+            # Daca contabilul nu are clienti — filtru gol => 0 rezultate (in loc de toate)
+            query = query.filter(Document.owner_id.in_(client_ids or [""]))
+        elif owner_id:
+            query = query.filter(Document.owner_id == owner_id)
 
     if document_type:
         query = query.filter(Document.document_type == document_type)

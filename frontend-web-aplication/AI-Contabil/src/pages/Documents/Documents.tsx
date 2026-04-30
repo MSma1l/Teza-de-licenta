@@ -12,6 +12,8 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 import CloseIcon from '@mui/icons-material/Close';
 import { useLanguage } from '../../context/LanguageContext';
 import type { Lang } from '../../context/LanguageContext';
+import { useAuth } from '../../context/AuthContext';
+import UserPicker from '../../components/UserPicker/UserPicker';
 
 const t: Record<Lang, {
   myDocs: string; docsCount: string; upload: string; search: string;
@@ -75,6 +77,9 @@ const Documents = () => {
   const { lang } = useLanguage();
   const tr = t[lang];
 
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
+
   const [documents, setDocuments] = useState<DocumentData[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -82,6 +87,9 @@ const Documents = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  // Admin: filtru pe user (client sau contabil). null = vede tot.
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [selectedUserRole, setSelectedUserRole] = useState<string | null>(null);
   const [showUpload, setShowUpload] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadTitle, setUploadTitle] = useState('');
@@ -92,16 +100,28 @@ const Documents = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
+  // Admin: daca a ales un CONTABIL → filtru accountant_id (vede docs ale clientilor lui)
+  // Daca a ales un CLIENT → filtru owner_id (vede doar documentele clientului)
+  const isContabilSelected = selectedUserRole === 'contabil';
+  const adminAccountantId = isAdmin && selectedUserId && isContabilSelected ? selectedUserId : undefined;
+  const adminOwnerId = isAdmin && selectedUserId && !isContabilSelected ? selectedUserId : undefined;
+
   const loadDocuments = async () => {
     setLoading(true);
     try {
-      const data = await fetchDocuments({ document_type: filterType || undefined, doc_status: filterStatus || undefined, limit: 100 });
+      const data = await fetchDocuments({
+        document_type: filterType || undefined,
+        doc_status: filterStatus || undefined,
+        owner_id: adminOwnerId,
+        accountant_id: adminAccountantId,
+        limit: 100,
+      });
       setDocuments(data.documents); setTotal(data.total);
     } catch { setError(tr.loadError); }
     finally { setLoading(false); }
   };
 
-  useEffect(() => { loadDocuments(); }, [filterType, filterStatus]);
+  useEffect(() => { loadDocuments(); }, [filterType, filterStatus, selectedUserId, selectedUserRole]);
 
   const handleUpload = async () => {
     if (!uploadFile || !uploadTitle.trim()) return;
@@ -159,13 +179,33 @@ const Documents = () => {
       <main className="flex-1 w-[85%] max-md:w-full mx-auto px-6 max-md:px-4 py-8">
         <div className="flex justify-between items-center mb-6 max-md:flex-col max-md:gap-4">
           <div>
-            <h1 className="font-[var(--font-heading)] text-2xl font-bold text-[var(--color-primary)]">{tr.myDocs}</h1>
-            <p className="text-[var(--color-neutral-400)] text-sm mt-1">{total} {tr.docsCount}</p>
+            <h1 className="font-[var(--font-heading)] text-2xl font-bold text-[var(--color-primary)]">
+              {isAdmin && selectedUserId
+                ? isContabilSelected
+                  ? 'Documentele clienților contabilului'
+                  : 'Documentele clientului'
+                : tr.myDocs}
+            </h1>
+            <p className="text-[var(--color-neutral-400)] text-sm mt-1">
+              {total} {tr.docsCount}
+              {isAdmin && !selectedUserId && ' (toți utilizatorii)'}
+            </p>
           </div>
-          <button onClick={() => setShowUpload(true)} className="btn-gradient flex items-center gap-2 px-5 py-2.5 rounded-lg">
-            <CloudUploadIcon fontSize="small" /> {tr.upload}
-          </button>
+          {!isAdmin && (
+            <button onClick={() => setShowUpload(true)} className="btn-gradient flex items-center gap-2 px-5 py-2.5 rounded-lg">
+              <CloudUploadIcon fontSize="small" /> {tr.upload}
+            </button>
+          )}
         </div>
+
+        {isAdmin && (
+          <UserPicker
+            selectedUserId={selectedUserId}
+            onChange={(id, role) => { setSelectedUserId(id); setSelectedUserRole(role || null); }}
+            roleFilter="non_admin"
+            label="Vezi documentele unui client sau ale clienților unui contabil"
+          />
+        )}
 
         <div className="flex gap-3 mb-6 max-md:flex-col">
           <div className="flex-1 relative">

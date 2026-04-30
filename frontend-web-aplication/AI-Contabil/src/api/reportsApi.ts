@@ -26,6 +26,7 @@ export async function fetchReports(params?: {
   report_type?: string;
   report_status?: string;
   client_id?: string;
+  accountant_id?: string;
   skip?: number;
   limit?: number;
 }): Promise<ReportListResponse> {
@@ -33,6 +34,7 @@ export async function fetchReports(params?: {
   if (params?.report_type) query.set('report_type', params.report_type);
   if (params?.report_status) query.set('report_status', params.report_status);
   if (params?.client_id) query.set('client_id', params.client_id);
+  if (params?.accountant_id) query.set('accountant_id', params.accountant_id);
   if (params?.skip) query.set('skip', String(params.skip));
   if (params?.limit) query.set('limit', String(params.limit));
 

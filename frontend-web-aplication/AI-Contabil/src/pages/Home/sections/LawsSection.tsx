@@ -14,6 +14,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
 import { useLanguage } from '../../../context/LanguageContext';
 import type { Lang } from '../../../context/LanguageContext';
+import { fetchPublicContent, type PublicContent } from '../../../api/publicContentApi';
 
 interface LawItem {
   icon: React.ReactNode;
@@ -206,6 +207,24 @@ const LawsSection = () => {
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
 
+  // Legi adaugate de admin din panou — apar primele in lista
+  const [adminLaws, setAdminLaws] = useState<PublicContent[]>([]);
+  useEffect(() => {
+    fetchPublicContent('lege', 30)
+      .then((items) => setAdminLaws(items))
+      .catch(() => setAdminLaws([])); // tacem eroarea — sectiunea ramane cu cele hardcodate
+  }, []);
+
+  // Combinam legile admin (mai recente, sus) cu cele hardcodate.
+  // Cele admin folosesc icon-ul GavelIcon ca default pentru ca nu le legam de un set fix.
+  const adminAsLawItems: LawItem[] = adminLaws.map((l) => ({
+    icon: <GavelIcon />,
+    title: l.title,
+    text: l.body,
+    url: l.url || '#',
+  }));
+  const allLaws: LawItem[] = [...adminAsLawItems, ...t.laws];
+
   const checkScroll = () => {
     const el = scrollRef.current;
     if (!el) return;
@@ -299,11 +318,11 @@ const LawsSection = () => {
           ref={scrollRef}
           className="flex gap-4 mb-8 overflow-x-auto scroll-smooth snap-x snap-mandatory py-2 px-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
         >
-          {t.laws.map((law, index) => (
+          {allLaws.map((law, index) => (
             <a
               key={index}
               href={law.url}
-              target="_blank"
+              target={law.url && law.url !== '#' ? '_blank' : undefined}
               rel="noopener noreferrer"
               className="flex-[0_0_31%] max-md:flex-[0_0_80%] snap-start flex flex-col gap-3 p-6 bg-[#f8fafc] border border-[#e2e8f0] rounded-xl transition-all duration-300 cursor-pointer hover:-translate-y-1 hover:shadow-lg hover:border-[#4f46e5]/30 group no-underline"
             >

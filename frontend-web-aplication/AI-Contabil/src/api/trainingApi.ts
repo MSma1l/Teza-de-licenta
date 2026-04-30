@@ -127,6 +127,12 @@ export async function confirmDocument(
   });
 }
 
+export async function triggerDocumentProcessing(
+  documentId: string,
+): Promise<{ status: string; fields_extracted: number; avg_confidence: number; has_flagged: boolean; message: string }> {
+  return apiRequest(`/training/documents/${documentId}/process`, { method: 'POST' });
+}
+
 export async function fetchModels(): Promise<Array<{
   id: string;
   model_name: string;

@@ -8,6 +8,7 @@ import Training from './pages/Training/Training';
 import Documents from './pages/Documents/Documents';
 import Reports from './pages/Reports/Reports';
 import Admin from './pages/Admin/Admin';
+import AdminDashboard from './pages/AdminDashboard/AdminDashboard';
 import Contabil from './pages/Contabil/Contabil';
 import ErrorBoundary from './components/ErrorBoundary/ErrorBoundary';
 import ChatWidget from './components/ChatWidget/ChatWidget';
@@ -44,13 +45,19 @@ function App() {
     );
   }
 
+  // Admin/super_admin logat → vede Dashboard-ul de admin in loc de landing-ul public
+  const role = (user?.role || '').toLowerCase();
+  const isAdmin = isLoggedIn && (role === 'admin' || role === 'super_admin');
+  const homeElement = isAdmin ? <AdminDashboard /> : <Home isLoggedIn={isLoggedIn} />;
+  const homeAuthElement = isLoggedIn ? (isAdmin ? <AdminDashboard /> : <Home isLoggedIn={true} />) : <Navigate to="/signin" />;
+
   return (
     <LanguageProvider>
       <ErrorBoundary>
         <div className="min-h-screen relative overflow-x-hidden">
           <Routes location={location} key={location.pathname}>
-            <Route path="/" element={<Home isLoggedIn={isLoggedIn} />} />
-            <Route path="/home" element={isLoggedIn ? <Home isLoggedIn={true} /> : <Navigate to="/signin" />} />
+            <Route path="/" element={homeElement} />
+            <Route path="/home" element={homeAuthElement} />
             <Route path="/signin" element={isLoggedIn ? <Navigate to="/home" /> : <SignIn />} />
             <Route path="/signup" element={isLoggedIn ? <Navigate to="/home" /> : <SignUp />} />
             <Route path="/settings" element={isLoggedIn ? <Settings /> : <Navigate to="/signin" />} />

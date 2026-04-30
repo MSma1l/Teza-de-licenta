@@ -276,6 +276,46 @@ class AdminAssignRequest(BaseModel):
     client_id: str
 
 
+class AdminResetPasswordRequest(BaseModel):
+    new_password: str | None = Field(default=None, min_length=8, max_length=128)
+
+
+def _generate_temp_password(length: int = 12) -> str:
+    """Genereaza o parola temporara robusta: minim 1 cifra + 1 simbol + 1 majuscula."""
+    import secrets
+    import string
+    alphabet = string.ascii_letters + string.digits + "!@#$%&*?"
+    while True:
+        pwd = "".join(secrets.choice(alphabet) for _ in range(length))
+        if (any(c.islower() for c in pwd) and any(c.isupper() for c in pwd)
+                and any(c.isdigit() for c in pwd)):
+            return pwd
+
+
+@router.post("/{user_id}/admin-reset-password")
+def admin_reset_password(
+    user_id: str,
+    data: AdminResetPasswordRequest,
+    current_user: User = Depends(require_role(UserRole.ADMIN, UserRole.SUPER_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    """Admin reseteaza parola unui user. Daca nu se specifica una, o genereaza.
+    Parola in clar e returnata o singura data — admin trebuie sa o transmita user-ului."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Utilizator negasit")
+
+    new_password = data.new_password or _generate_temp_password()
+    user.password_hash = hash_password(new_password)
+    db.commit()
+    return {
+        "user_id": user.id,
+        "username": user.username,
+        "new_password": new_password,
+        "message": "Parola a fost resetata. Transmite parola in mod sigur catre utilizator.",
+    }
+
+
 @router.post("/admin/assign-client")
 def admin_assign_client(
     data: AdminAssignRequest,

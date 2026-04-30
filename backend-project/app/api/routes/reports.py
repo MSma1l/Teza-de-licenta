@@ -196,6 +196,7 @@ def list_reports(
     report_type: str | None = None,
     report_status: str | None = None,
     client_id: str | None = None,
+    accountant_id: str | None = None,
     skip: int = 0,
     limit: int = 50,
     current_user: User = Depends(get_current_user),
@@ -210,7 +211,13 @@ def list_reports(
             query = query.filter(Report.client_id == client_id, Report.created_by == current_user.id)
         else:
             query = query.filter(Report.created_by == current_user.id)
-    # Admin vede tot
+    elif current_user.role in (UserRole.ADMIN, UserRole.SUPER_ADMIN):
+        # Admin vede tot — poate filtra fie pe un client (client_id),
+        # fie pe toate rapoartele facute de un contabil (accountant_id)
+        if accountant_id:
+            query = query.filter(Report.created_by == accountant_id)
+        elif client_id:
+            query = query.filter(Report.client_id == client_id)
 
     if report_type:
         query = query.filter(Report.report_type == report_type)

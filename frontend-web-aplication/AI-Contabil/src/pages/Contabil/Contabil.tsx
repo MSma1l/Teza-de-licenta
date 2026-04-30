@@ -20,7 +20,7 @@ import type { UserData } from '../../api/authApi';
 import { fetchDocuments, DOCUMENT_TYPES, DOCUMENT_STATUSES } from '../../api/documentsApi';
 import type { DocumentData } from '../../api/documentsApi';
 
-import { fetchDocumentOcr } from '../../api/trainingApi';
+import { fetchDocumentOcr, triggerDocumentProcessing } from '../../api/trainingApi';
 import type { DocumentOcrData } from '../../api/trainingApi';
 
 type Tab = 'clienti' | 'coada' | 'solicitari' | 'rapoarte';
@@ -190,6 +190,8 @@ function TabCoada() {
   const [docSelectat, setDocSelectat] = useState<DocumentData | null>(null);
   const [ocrData, setOcrData] = useState<DocumentOcrData | null>(null);
   const [loadingOcr, setLoadingOcr] = useState(false);
+  const [proceseaza, setProceseaza] = useState(false);
+  const [feedbackProcesare, setFeedbackProcesare] = useState<string | null>(null);
 
   const incarcaCoada = useCallback(async () => {
     setLoading(true);
@@ -218,6 +220,7 @@ function TabCoada() {
   async function selecteazaDoc(doc: DocumentData) {
     setDocSelectat(doc);
     setOcrData(null);
+    setFeedbackProcesare(null);
     setLoadingOcr(true);
     try {
       const data = await fetchDocumentOcr(doc.id);
@@ -227,6 +230,25 @@ function TabCoada() {
       console.warn('OCR data lipsa:', e);
     } finally {
       setLoadingOcr(false);
+    }
+  }
+
+  async function lanseazaProcesare() {
+    if (!docSelectat) return;
+    setProceseaza(true);
+    setFeedbackProcesare(null);
+    try {
+      const r = await triggerDocumentProcessing(docSelectat.id);
+      setFeedbackProcesare(r.message);
+      // Reincarca datele OCR pentru a vedea campurile noi extrase
+      const data = await fetchDocumentOcr(docSelectat.id);
+      setOcrData(data);
+      // Reincarca si lista (status-ul s-a schimbat in coada)
+      await incarcaCoada();
+    } catch (e) {
+      setFeedbackProcesare(e instanceof Error ? e.message : 'Eroare la procesare');
+    } finally {
+      setProceseaza(false);
     }
   }
 
@@ -273,7 +295,14 @@ function TabCoada() {
         {!docSelectat ? (
           <CardStareGoala text="Selecteaza un document din coada pentru a-l valida." icon="👈" />
         ) : (
-          <PanouValidare doc={docSelectat} ocr={ocrData} loading={loadingOcr} />
+          <PanouValidare
+            doc={docSelectat}
+            ocr={ocrData}
+            loading={loadingOcr}
+            onProceseaza={lanseazaProcesare}
+            proceseaza={proceseaza}
+            feedbackProcesare={feedbackProcesare}
+          />
         )}
       </div>
     </div>
@@ -611,10 +640,16 @@ function PanouValidare({
   doc,
   ocr,
   loading,
+  onProceseaza,
+  proceseaza,
+  feedbackProcesare,
 }: {
   doc: DocumentData;
   ocr: DocumentOcrData | null;
   loading: boolean;
+  onProceseaza: () => void;
+  proceseaza: boolean;
+  feedbackProcesare: string | null;
 }) {
   const campuri = ocr?.extracted_fields || [];
 
@@ -629,29 +664,62 @@ function PanouValidare({
 
   return (
     <div>
-      <div className="mb-4">
-        <h3 className="font-bold text-lg text-neutral-900">{doc.title}</h3>
-        <div className="flex flex-wrap gap-2 mt-1.5 text-xs">
-          <span className="px-2 py-0.5 rounded bg-neutral-100 text-neutral-600">
-            {DOCUMENT_TYPES[doc.document_type] || doc.document_type}
-          </span>
-          <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700">
-            {DOCUMENT_STATUSES[doc.status] || doc.status}
-          </span>
-          {doc.avg_ocr_confidence !== null && (
-            <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700">
-              OCR conf: {Math.round((doc.avg_ocr_confidence || 0) * 100)}%
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div>
+          <h3 className="font-bold text-lg text-neutral-900">{doc.title}</h3>
+          <div className="flex flex-wrap gap-2 mt-1.5 text-xs">
+            <span className="px-2 py-0.5 rounded bg-neutral-100 text-neutral-600">
+              {DOCUMENT_TYPES[doc.document_type] || doc.document_type}
             </span>
-          )}
+            <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700">
+              {DOCUMENT_STATUSES[doc.status] || doc.status}
+            </span>
+            {doc.avg_ocr_confidence !== null && (
+              <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700">
+                OCR conf: {Math.round((doc.avg_ocr_confidence || 0) * 100)}%
+              </span>
+            )}
+          </div>
         </div>
+        {campuri.length > 0 && (
+          <button
+            onClick={onProceseaza}
+            disabled={proceseaza}
+            className="text-xs px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 rounded-md font-semibold text-neutral-700 whitespace-nowrap disabled:opacity-50"
+            title="Refa procesarea AI (OCR + clasificare + extractie)"
+          >
+            {proceseaza ? '⏳ Procesez...' : '🔄 Reproceseaza'}
+          </button>
+        )}
       </div>
 
       {loading ? (
         <p className="text-sm text-neutral-500 py-8 text-center">Se incarca datele OCR...</p>
       ) : campuri.length === 0 ? (
-        <div className="bg-amber-50 border border-amber-200 rounded-md p-4 text-sm text-amber-800">
-          Acest document nu are inca campuri extrase de AI. Lanseaza pipeline-ul de procesare sau
-          asteapta finalizarea OCR-ului in fundal.
+        <div className="space-y-3">
+          <div className="bg-amber-50 border border-amber-200 rounded-md p-4 text-sm text-amber-800">
+            Acest document nu are inca campuri extrase de AI. Apasa butonul de mai jos pentru a
+            lansa procesarea (OCR + clasificare + extractie entitati).
+          </div>
+          <button
+            onClick={onProceseaza}
+            disabled={proceseaza}
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-md disabled:opacity-50 inline-flex items-center justify-center gap-2"
+          >
+            {proceseaza ? (
+              <>
+                <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Se proceseaza...
+              </>
+            ) : (
+              <>🤖 Lanseaza procesare AI</>
+            )}
+          </button>
+          {feedbackProcesare && (
+            <div className="text-sm bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-md p-2">
+              {feedbackProcesare}
+            </div>
+          )}
         </div>
       ) : (
         <div className="space-y-2">

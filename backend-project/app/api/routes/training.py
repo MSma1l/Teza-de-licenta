@@ -119,11 +119,128 @@ def get_training_documents(
     }
 
 
+@router.post("/documents/{document_id}/process")
+def trigger_document_processing(
+    document_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role("super_admin", "admin", "contabil")),
+):
+    """Lanseaza procesare AI pentru un document (demo / thesis-mode).
+
+    In productie aceasta ruta ar trimite un task Celery catre AI service. Pentru
+    demo-ul tezei, generam direct campuri verosimile in DB pe baza tipului de
+    document (factura/chitanta/contract/etc.), ca panoul de validare al contabilului
+    sa aiba ce afisa. Inlocuieste cu apel real la pipeline cand AI service-ul
+    este wired.
+    """
+    import random
+    import string
+
+    doc = db.query(Document).filter(Document.id == document_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document negasit")
+
+    # Sterge campurile vechi (idempotent — buton "reproceseaza")
+    db.query(ExtractedField).filter(ExtractedField.document_id == document_id).delete()
+
+    # Tipul documentului — folosim ce e deja pus, sau il deducem din titlu
+    dtype = (doc.document_type.value if hasattr(doc.document_type, 'value') else doc.document_type) or "altele"
+    titlu_lower = (doc.title or doc.file_name or "").lower()
+    if dtype == "altele":
+        if "factur" in titlu_lower:
+            dtype = "factura"
+        elif "chitan" in titlu_lower:
+            dtype = "chitanta"
+        elif "contract" in titlu_lower:
+            dtype = "contract"
+        elif "extras" in titlu_lower:
+            dtype = "extras_bancar"
+
+    # Set de campuri demo per tip — confidence variat ca sa apara unele "flagged"
+    rand_id = "".join(random.choices(string.digits, k=4))
+    field_set: list[tuple[str, str, float]] = []
+    if dtype == "factura":
+        field_set = [
+            ("invoice_number", f"FA-{rand_id}", 0.95),
+            ("invoice_date", "2026-04-15", 0.92),
+            ("vendor_name", "ABC SRL", 0.88),
+            ("vendor_cui", f"103060{rand_id[:4]}", 0.74),  # flagged
+            ("total", f"{random.randint(1000, 50000)}.{random.randint(10, 99)}", 0.91),
+            ("vat", "20%", 0.96),
+            ("currency", "MDL", 0.99),
+        ]
+    elif dtype == "chitanta":
+        field_set = [
+            ("receipt_number", f"CH-{rand_id}", 0.93),
+            ("date", "2026-04-15", 0.90),
+            ("amount", f"{random.randint(50, 2000)}.{random.randint(10, 99)}", 0.85),
+            ("payer", "Client SRL", 0.78),  # flagged
+        ]
+    elif dtype == "contract":
+        field_set = [
+            ("contract_number", f"CT-{rand_id}", 0.94),
+            ("contract_date", "2026-01-10", 0.91),
+            ("party_a", "ABC SRL", 0.88),
+            ("party_b", "Client Demo SRL", 0.86),
+            ("contract_value", f"{random.randint(10000, 500000)}", 0.72),  # flagged
+        ]
+    elif dtype == "extras_bancar":
+        field_set = [
+            ("account_number", f"MD24EX0000000{rand_id}0001", 0.93),
+            ("statement_date", "2026-04-30", 0.95),
+            ("opening_balance", f"{random.randint(1000, 100000)}.00", 0.89),
+            ("closing_balance", f"{random.randint(1000, 100000)}.00", 0.89),
+            ("transaction_count", str(random.randint(5, 50)), 0.97),
+        ]
+    else:
+        field_set = [
+            ("title", doc.title or "—", 0.90),
+            ("date", "2026-04-15", 0.85),
+            ("amount", f"{random.randint(100, 10000)}", 0.70),  # flagged
+        ]
+
+    # Insereaza in DB
+    has_flagged = False
+    confs: list[float] = []
+    for fname, fvalue, conf in field_set:
+        confs.append(conf)
+        is_flagged = conf < 0.80
+        if is_flagged:
+            has_flagged = True
+        db.add(ExtractedField(
+            document_id=document_id,
+            field_name=fname,
+            value_encrypted=fvalue,  # nu criptam in demo — direct text
+            confidence=conf,
+            is_flagged=is_flagged,
+        ))
+
+    # Update document
+    doc.document_type = dtype
+    doc.status = DocumentStatus.EXTRAS
+    doc.avg_ocr_confidence = sum(confs) / len(confs) if confs else 0.0
+    doc.has_flagged_fields = has_flagged
+    doc.document_type_confidence = 0.91
+    if not doc.urgency_score:
+        doc.urgency_score = 0.6 if has_flagged else 0.3
+
+    db.commit()
+    db.refresh(doc)
+    return {
+        "status": "ok",
+        "document_id": document_id,
+        "fields_extracted": len(field_set),
+        "avg_confidence": doc.avg_ocr_confidence,
+        "has_flagged": has_flagged,
+        "message": f"Document procesat. {len(field_set)} campuri extrase.",
+    }
+
+
 @router.get("/documents/{document_id}/ocr")
 def get_document_ocr_data(
     document_id: str,
     db: Session = Depends(get_db),
-    user: User = Depends(require_role("super_admin", "admin")),
+    user: User = Depends(require_role("super_admin", "admin", "contabil")),
 ):
     """
     Returnează datele OCR complete pentru vizualizare:

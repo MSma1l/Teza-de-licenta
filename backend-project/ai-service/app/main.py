@@ -15,6 +15,14 @@ from app.core.config import settings
 from app.core.logging import setup_logging
 from app.core.database import engine, Base
 
+# Importam toate modelele inainte ca SQLAlchemy sa configureze relatiile
+# (User.company referinte Company → trebuie ambele clase incarcate inainte de
+# prima query, altfel mapperul User esueaza cu InvalidRequestError la audit log).
+from app.models import (  # noqa: F401
+    user, document, audit_log, company, document_embedding,
+    extracted_field, model_version, recommendation, training_example,
+)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

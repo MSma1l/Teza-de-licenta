@@ -20,8 +20,16 @@ import {
 } from '../../api/usersApi';
 import type { UserData } from '../../api/authApi';
 import { fetchTrainingStats, fetchModels, type TrainingStats } from '../../api/trainingApi';
+import {
+  fetchPublicContent,
+  createPublicContent,
+  deletePublicContent,
+  type PublicContent,
+  type PublicContentType,
+} from '../../api/publicContentApi';
+import UserDetailModal from '../../components/UserDetailModal/UserDetailModal';
 
-type AdminTab = 'utilizatori' | 'antrenare' | 'lege' | 'audit';
+type AdminTab = 'utilizatori' | 'antrenare' | 'lege' | 'public' | 'audit';
 
 const Admin = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -50,7 +58,8 @@ const Admin = () => {
           {([
             { id: 'utilizatori', label: 'Utilizatori', icon: '👥' },
             { id: 'antrenare', label: 'Antrenare AI', icon: '🧠' },
-            { id: 'lege', label: 'Adauga lege', icon: '📜' },
+            { id: 'lege', label: 'Adauga lege (RAG)', icon: '📜' },
+            { id: 'public', label: 'Continut public', icon: '🌐' },
             { id: 'audit', label: 'Audit log', icon: '🔒' },
           ] as const).map((t) => (
             <button
@@ -71,6 +80,7 @@ const Admin = () => {
         {tab === 'utilizatori' && <TabUtilizatori />}
         {tab === 'antrenare' && <TabAntrenare />}
         {tab === 'lege' && <TabLege />}
+        {tab === 'public' && <TabContinutPublic />}
         {tab === 'audit' && <TabAudit />}
       </div>
     </div>
@@ -88,6 +98,9 @@ function TabUtilizatori() {
   const [filtru, setFiltru] = useState<Filter>('');
   const [loading, setLoading] = useState(true);
   const [eroare, setEroare] = useState<string | null>(null);
+
+  // User selectat pentru modal cu detalii (reset pwd + activity)
+  const [userDetaliu, setUserDetaliu] = useState<UserData | null>(null);
 
   const [dialogDeschis, setDialogDeschis] = useState(false);
   const [formUsername, setFormUsername] = useState('');
@@ -124,7 +137,7 @@ function TabUtilizatori() {
     }
     setFormSeTrimite(true);
     try {
-      await createContabil({
+      const newUser = await createContabil({
         username: formUsername.trim(),
         email: formEmail.trim(),
         password: formParola,
@@ -135,7 +148,20 @@ function TabUtilizatori() {
       setFormEmail('');
       setFormParola('');
       setFormNume('');
-      await incarcaLista();
+
+      // Optimistic update — afisam imediat noul contabil in lista,
+      // ca admin-ul sa nu vada o lista "neschimbata" cat asteapta refetch.
+      setUsers((prev) => [newUser, ...prev]);
+      setTotal((prev) => prev + 1);
+
+      // Daca filtrul curent ar ascunde noul contabil (ex: 'admin' / 'client'),
+      // resetam la "Toti" — useEffect va re-fetch automat cu filtru gol.
+      // Altfel sincronizam manual cu serverul.
+      if (filtru !== '' && filtru !== 'contabil') {
+        setFiltru('');
+      } else {
+        await incarcaLista();
+      }
     } catch (e) {
       setFormEroare(e instanceof Error ? e.message : 'Eroare la creare');
     } finally {
@@ -205,7 +231,11 @@ function TabUtilizatori() {
                 <tr><td colSpan={4} className="px-4 py-10 text-center text-neutral-500">Niciun utilizator gasit cu filtrul curent.</td></tr>
               ) : (
                 users.map((u) => (
-                  <tr key={u.id} className="border-b border-neutral-100 hover:bg-neutral-50">
+                  <tr
+                    key={u.id}
+                    className="border-b border-neutral-100 hover:bg-indigo-50/50 cursor-pointer transition"
+                    onClick={() => setUserDetaliu(u)}
+                  >
                     <td className="px-4 py-3">
                       <div className="flex flex-col">
                         <span className="font-semibold text-neutral-900">{u.full_name || u.username}</span>
@@ -218,7 +248,7 @@ function TabUtilizatori() {
                         {u.role}
                       </span>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <SchimbaRolDropdown currentRole={u.role} onChange={(r) => schimbaRol(u.id, r)} />
                     </td>
                   </tr>
@@ -254,6 +284,10 @@ function TabUtilizatori() {
             </form>
           </div>
         </div>
+      )}
+
+      {userDetaliu && (
+        <UserDetailModal user={userDetaliu} onClose={() => setUserDetaliu(null)} />
       )}
     </>
   );
@@ -622,6 +656,234 @@ function CardStat({ label, value }: { label: string; value: number | string }) {
     <div className="bg-white rounded-lg border border-neutral-200 p-4">
       <div className="text-xs uppercase font-semibold text-neutral-500 mb-1">{label}</div>
       <div className="text-2xl font-bold text-neutral-900">{value}</div>
+    </div>
+  );
+}
+
+/* ============================================
+   TAB — Continut public (legi + stiri afisate pe landing)
+   ============================================ */
+function TabContinutPublic() {
+  const [tip, setTip] = useState<PublicContentType>('lege');
+  const [titlu, setTitlu] = useState('');
+  const [body, setBody] = useState('');
+  const [url, setUrl] = useState('');
+  const [tag, setTag] = useState('');
+  const [color, setColor] = useState('#4f46e5');
+  const [salveaza, setSalveaza] = useState(false);
+  const [feedback, setFeedback] = useState<{ kind: 'ok' | 'err'; msg: string } | null>(null);
+
+  const [items, setItems] = useState<PublicContent[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const reincarca = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await fetchPublicContent(undefined, 100);
+      setItems(data);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    reincarca();
+  }, [reincarca]);
+
+  async function adauga() {
+    if (!titlu.trim() || !body.trim()) {
+      setFeedback({ kind: 'err', msg: 'Titlul si textul sunt obligatorii.' });
+      return;
+    }
+    setSalveaza(true);
+    setFeedback(null);
+    try {
+      const newItem = await createPublicContent({
+        type: tip,
+        title: titlu.trim(),
+        body: body.trim(),
+        url: tip === 'lege' ? url.trim() || undefined : undefined,
+        tag: tag.trim() || undefined,
+        color: tip === 'stire' ? color : undefined,
+      });
+      setItems((prev) => [newItem, ...prev]);
+      setTitlu('');
+      setBody('');
+      setUrl('');
+      setTag('');
+      setFeedback({
+        kind: 'ok',
+        msg: `${tip === 'lege' ? 'Legea' : 'Stirea'} a fost publicata pe pagina principala.`,
+      });
+    } catch (e) {
+      setFeedback({ kind: 'err', msg: e instanceof Error ? e.message : 'Eroare la salvare' });
+    } finally {
+      setSalveaza(false);
+    }
+  }
+
+  async function sterge(id: string) {
+    if (!confirm('Sterg acest articol din pagina publica?')) return;
+    try {
+      await deletePublicContent(id);
+      setItems((prev) => prev.filter((i) => i.id !== id));
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Eroare la stergere');
+    }
+  }
+
+  return (
+    <div className="max-w-5xl">
+      <h2 className="text-xl font-bold text-neutral-900 mb-1">Continut public — landing page</h2>
+      <p className="text-sm text-neutral-600 mb-6">
+        Adauga legi (sectiunea Legislatie) sau stiri (sectiunea Noutati) care apar pe pagina principala
+        a vizitatorilor. Acest continut este complet separat de corpusul Djarvis.
+      </p>
+
+      <div className="grid lg:grid-cols-2 gap-6">
+        {/* === Form adaugare === */}
+        <div className="bg-white rounded-xl border border-neutral-200 p-5">
+          <h3 className="font-bold text-neutral-900 mb-4">Adauga articol nou</h3>
+
+          <div className="flex gap-2 mb-4">
+            {(['lege', 'stire'] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setTip(t)}
+                className={`flex-1 px-4 py-2 rounded-md text-sm font-semibold transition ${
+                  tip === t
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+                }`}
+              >
+                {t === 'lege' ? '📜 Lege' : '📰 Stire'}
+              </button>
+            ))}
+          </div>
+
+          <div className="space-y-3">
+            <Camp
+              label="Titlu *"
+              value={titlu}
+              onChange={setTitlu}
+              placeholder={tip === 'lege' ? 'Ex: Legea Contabilitatii nr. 113/2007' : 'Ex: Modificari Cod Fiscal 2026'}
+              required
+            />
+
+            <div>
+              <label className="block text-xs font-semibold text-neutral-600 uppercase mb-1">
+                {tip === 'lege' ? 'Descriere scurta *' : 'Sumar *'}
+              </label>
+              <textarea
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                rows={4}
+                placeholder={
+                  tip === 'lege'
+                    ? 'Descrie pe scurt ce reglementeaza legea (apare pe card)'
+                    : 'Sumar al stirii (apare pe card)'
+                }
+                className="w-full border border-neutral-200 rounded-md px-3 py-2 text-sm"
+              />
+            </div>
+
+            {tip === 'lege' && (
+              <Camp
+                label="URL catre lege"
+                value={url}
+                onChange={setUrl}
+                placeholder="https://www.legis.md/..."
+              />
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <Camp
+                label={tip === 'lege' ? 'Categorie' : 'Tag'}
+                value={tag}
+                onChange={setTag}
+                placeholder={tip === 'lege' ? 'Cod Fiscal' : 'TVA'}
+              />
+              {tip === 'stire' && (
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-600 uppercase mb-1">Culoare</label>
+                  <input
+                    type="color"
+                    value={color}
+                    onChange={(e) => setColor(e.target.value)}
+                    className="w-full h-10 border border-neutral-200 rounded-md cursor-pointer"
+                  />
+                </div>
+              )}
+            </div>
+
+            {feedback && (
+              <div
+                className={`text-sm rounded-md p-2 border ${
+                  feedback.kind === 'ok'
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                    : 'bg-red-50 border-red-200 text-red-700'
+                }`}
+              >
+                {feedback.msg}
+              </div>
+            )}
+
+            <button
+              onClick={adauga}
+              disabled={salveaza}
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-md disabled:opacity-50"
+            >
+              {salveaza ? 'Se publica...' : 'Publica pe landing'}
+            </button>
+          </div>
+        </div>
+
+        {/* === Lista existenta === */}
+        <div className="bg-white rounded-xl border border-neutral-200 p-5">
+          <h3 className="font-bold text-neutral-900 mb-4">Articole publicate ({items.length})</h3>
+          {loading ? (
+            <div className="text-sm text-neutral-500">Se incarca…</div>
+          ) : items.length === 0 ? (
+            <div className="text-sm text-neutral-500 italic">
+              Niciun articol publicat. Adauga primul folosind formularul din stanga.
+            </div>
+          ) : (
+            <ul className="space-y-2 max-h-[600px] overflow-y-auto">
+              {items.map((it) => (
+                <li
+                  key={it.id}
+                  className="flex justify-between items-start gap-3 p-3 bg-neutral-50 rounded-md border border-neutral-100"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span
+                        className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
+                          it.type === 'lege' ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700'
+                        }`}
+                      >
+                        {it.type}
+                      </span>
+                      {it.tag && <span className="text-xs text-neutral-500">{it.tag}</span>}
+                      <span className="text-xs text-neutral-400 ml-auto">
+                        {new Date(it.published_date).toLocaleDateString('ro')}
+                      </span>
+                    </div>
+                    <div className="font-semibold text-sm text-neutral-900 truncate">{it.title}</div>
+                    <div className="text-xs text-neutral-600 mt-1 line-clamp-2">{it.body}</div>
+                  </div>
+                  <button
+                    onClick={() => sterge(it.id)}
+                    className="text-red-600 hover:text-red-800 text-xs font-semibold whitespace-nowrap"
+                    title="Sterge"
+                  >
+                    Sterge
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
