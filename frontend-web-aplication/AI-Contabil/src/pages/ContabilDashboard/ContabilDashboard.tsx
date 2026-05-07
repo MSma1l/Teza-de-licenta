@@ -8,7 +8,6 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
-import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import InboxOutlinedIcon from '@mui/icons-material/InboxOutlined';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
@@ -16,6 +15,10 @@ import AssessmentOutlinedIcon from '@mui/icons-material/AssessmentOutlined';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import TrendingUpOutlinedIcon from '@mui/icons-material/TrendingUpOutlined';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined';
+import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
+import PersonOffOutlinedIcon from '@mui/icons-material/PersonOffOutlined';
+import SpeedOutlinedIcon from '@mui/icons-material/SpeedOutlined';
 
 import Navbar from '../../components/Navbar/Navbar';
 import {
@@ -23,10 +26,18 @@ import {
   fetchContabilClienti,
   fetchContabilCoadaUrgente,
   fetchContabilTimeseries,
+  fetchContabilPerformance,
+  fetchContabilActivityFeed,
+  fetchContabilInactiveClients,
+  fetchUpcomingDeadlines,
   type ContabilOverview,
   type ContabilClient,
   type ContabilQueueDoc,
   type ContabilTimeseries,
+  type PerformanceData,
+  type ActivityEvent,
+  type InactiveClient,
+  type UpcomingDeadline,
 } from '../../api/contabilDashboardApi';
 
 const TYPE_LABEL: Record<string, string> = {
@@ -54,16 +65,25 @@ const ContabilDashboard = () => {
   const [clienti, setClienti] = useState<ContabilClient[]>([]);
   const [coada, setCoada] = useState<ContabilQueueDoc[]>([]);
   const [series, setSeries] = useState<ContabilTimeseries | null>(null);
+  const [performance, setPerformance] = useState<PerformanceData | null>(null);
+  const [activity, setActivity] = useState<ActivityEvent[]>([]);
+  const [inactive, setInactive] = useState<InactiveClient[]>([]);
+  const [deadlines, setDeadlines] = useState<UpcomingDeadline[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
     setLoading(true);
+    const safe = (p: Promise<unknown>): Promise<void> => p.then(() => undefined).catch(() => undefined);
     Promise.allSettled([
-      fetchContabilOverview().then((d) => mounted && setOverview(d)),
-      fetchContabilClienti().then((d) => mounted && setClienti(d.clienti)),
-      fetchContabilCoadaUrgente(5).then((d) => mounted && setCoada(d.documente)),
-      fetchContabilTimeseries(7).then((d) => mounted && setSeries(d)),
+      safe(fetchContabilOverview().then((d) => { if (mounted) setOverview(d); })),
+      safe(fetchContabilClienti().then((d) => { if (mounted) setClienti(d.clienti); })),
+      safe(fetchContabilCoadaUrgente(5).then((d) => { if (mounted) setCoada(d.documente); })),
+      safe(fetchContabilTimeseries(7).then((d) => { if (mounted) setSeries(d); })),
+      safe(fetchContabilPerformance().then((d) => { if (mounted) setPerformance(d); })),
+      safe(fetchContabilActivityFeed(10).then((d) => { if (mounted) setActivity(d.events); })),
+      safe(fetchContabilInactiveClients(14).then((d) => { if (mounted) setInactive(d.inactive); })),
+      safe(fetchUpcomingDeadlines().then((d) => { if (mounted) setDeadlines(d.upcoming); })),
     ]).then(() => mounted && setLoading(false));
     return () => { mounted = false; };
   }, []);
@@ -164,6 +184,128 @@ const ContabilDashboard = () => {
             onClick={() => navigate('/contabil?tab=chat')}
             highlight={(overview?.chat_escalated_open ?? 0) > 0}
           />
+        </div>
+
+        {/* === NEW: Termene fiscale + Performance saptamana === */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-4 mb-6">
+          {/* B1 — Termene fiscale apropiate */}
+          <Card title="Termene fiscale apropiate" icon={<EventAvailableOutlinedIcon className="text-neutral-700" />}>
+            {deadlines.length === 0 ? (
+              <Empty msg="Nicio depunere SFS in urmatoarele 60 zile." />
+            ) : (
+              <ul className="space-y-2">
+                {deadlines.slice(0, 5).map((d, i) => {
+                  const tone =
+                    d.urgency === 'urgent' ? 'border-red-300 bg-red-50' :
+                    d.urgency === 'warning' ? 'border-amber-300 bg-amber-50' :
+                    'border-emerald-200 bg-emerald-50';
+                  const txt =
+                    d.urgency === 'urgent' ? 'text-red-800' :
+                    d.urgency === 'warning' ? 'text-amber-800' :
+                    'text-emerald-800';
+                  return (
+                    <li key={i} className={`flex justify-between items-center p-3 rounded-lg border ${tone}`}>
+                      <div>
+                        <div className={`font-semibold text-sm ${txt}`}>{d.name}</div>
+                        <div className="text-xs text-neutral-600">Perioada {d.period} · scadent {new Date(d.due_date).toLocaleDateString('ro')}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className={`text-2xl font-bold ${txt}`}>{d.days_left}</div>
+                        <div className="text-[10px] uppercase font-bold text-neutral-500">{d.days_left === 1 ? 'zi' : 'zile'}</div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </Card>
+
+          {/* B2 — Performance saptamanal */}
+          <Card title="Performanta saptamana asta" icon={<SpeedOutlinedIcon className="text-neutral-700" />}>
+            {!performance ? (
+              <Empty msg="Se incarca..." />
+            ) : (
+              <div className="space-y-3">
+                <PerfRow
+                  label="Documente noi"
+                  curr={performance.saptamana_asta.documente_noi}
+                  prev={performance.saptamana_trecuta.documente_noi}
+                  delta={performance.delta_pct.documente_noi}
+                />
+                <PerfRow
+                  label="Documente aprobate"
+                  curr={performance.saptamana_asta.documente_aprobate}
+                  prev={performance.saptamana_trecuta.documente_aprobate}
+                  delta={performance.delta_pct.documente_aprobate}
+                />
+                <PerfRow
+                  label="Rapoarte create"
+                  curr={performance.saptamana_asta.rapoarte_create}
+                  prev={performance.saptamana_trecuta.rapoarte_create}
+                  delta={performance.delta_pct.rapoarte_create}
+                />
+                <div className="text-xs text-neutral-500 mt-2 italic">
+                  Comparativ cu saptamana trecuta
+                </div>
+              </div>
+            )}
+          </Card>
+        </div>
+
+        {/* === NEW: Activity feed + Clienti inactivi === */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+          {/* B3 — Activity feed */}
+          <Card title="Activitate recenta clienti" icon={<HistoryOutlinedIcon className="text-neutral-700" />}>
+            {activity.length === 0 ? (
+              <Empty msg="Niciun eveniment in ultimele 7 zile." />
+            ) : (
+              <ul className="space-y-2 max-h-72 overflow-y-auto">
+                {activity.map((e, i) => (
+                  <li key={i} className="flex items-start gap-3 py-2 border-b border-neutral-100 last:border-0">
+                    <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs shrink-0">
+                      📄
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm text-neutral-900 truncate">
+                        <span className="font-semibold">{e.client_name}</span> a încărcat <span className="text-indigo-700">{e.title}</span>
+                      </div>
+                      <div className="text-xs text-neutral-500">
+                        {e.timestamp ? new Date(e.timestamp).toLocaleString('ro') : '—'} · status: {e.status}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+
+          {/* B4 — Clienti inactivi */}
+          <Card title="Clienti inactivi (>14 zile)" icon={<PersonOffOutlinedIcon className="text-neutral-700" />}>
+            {inactive.length === 0 ? (
+              <div className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md p-3 italic">
+                ✓ Toți clienții au activitate recentă.
+              </div>
+            ) : (
+              <ul className="space-y-2">
+                {inactive.slice(0, 6).map((c) => (
+                  <li key={c.id} className="flex justify-between items-center p-2.5 rounded-lg bg-amber-50 border border-amber-200">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-sm text-neutral-900 truncate">
+                        {c.full_name || c.username}
+                      </div>
+                      <div className="text-xs text-neutral-600 truncate">{c.email}</div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-lg font-bold text-amber-800">
+                        {c.days_since_last !== null ? `${c.days_since_last}` : '∞'}
+                      </div>
+                      <div className="text-[10px] uppercase font-bold text-amber-700">zile</div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
         </div>
 
         {/* === ROW 2 — Clientii mei + Coada urgente === */}
@@ -355,6 +497,42 @@ function Card({ title, icon, children }: { title: string; icon?: React.ReactNode
 
 function Empty({ msg }: { msg: string }) {
   return <div className="text-sm text-neutral-500 italic py-4 text-center">{msg}</div>;
+}
+
+function PerfRow({
+  label,
+  curr,
+  prev,
+  delta,
+}: {
+  label: string;
+  curr: number;
+  prev: number;
+  delta: number | null;
+}) {
+  const tone =
+    delta === null ? 'text-neutral-500' :
+    delta > 0 ? 'text-emerald-700' :
+    delta < 0 ? 'text-red-700' :
+    'text-neutral-600';
+  const arrow =
+    delta === null ? '—' :
+    delta > 0 ? '▲' :
+    delta < 0 ? '▼' :
+    '=';
+  return (
+    <div className="flex justify-between items-center py-1.5 border-b border-neutral-100 last:border-0">
+      <div>
+        <div className="text-xs uppercase font-bold text-neutral-500">{label}</div>
+        <div className="text-xl font-bold text-neutral-900">
+          {curr} <span className="text-xs font-normal text-neutral-400">vs {prev}</span>
+        </div>
+      </div>
+      <div className={`text-sm font-bold ${tone}`}>
+        {arrow} {delta !== null ? `${Math.abs(delta)}%` : 'n/a'}
+      </div>
+    </div>
+  );
 }
 
 function ActionLink({

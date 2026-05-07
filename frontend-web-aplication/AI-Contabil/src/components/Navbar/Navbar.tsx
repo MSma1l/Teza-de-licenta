@@ -11,6 +11,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import CloseIcon from '@mui/icons-material/Close';
 import InboxIcon from '@mui/icons-material/Inbox';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import NoteAddOutlinedIcon from '@mui/icons-material/NoteAddOutlined';
 
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -134,6 +135,17 @@ const Navbar = ({ isLoggedIn = false, showNavLinks = true }: NavbarProps) => {
               >
                 <DescriptionIcon />
               </div>
+
+              {/* CONTABIL + CLIENT + RECEPTIONIST: Generator documente (PDF) */}
+              {!isAdmin && (
+                <div
+                  className={iconBtnClass}
+                  onClick={() => navigate('/generator')}
+                  title="Generator documente (factura, chitanta, contract, stat de plata)"
+                >
+                  <NoteAddOutlinedIcon />
+                </div>
+              )}
 
               {/* CONTABIL + ADMIN: Coada documente */}
               {(isContabil || isAdmin) && (

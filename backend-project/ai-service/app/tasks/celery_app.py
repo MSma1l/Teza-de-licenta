@@ -26,5 +26,12 @@ celery_app.conf.update(
     task_time_limit=600,        # 10 min hard limit
 )
 
-# Auto-discover tasks
+# Auto-discover tasks (cauta tasks.py in pachet — lasam ca fallback)
 celery_app.autodiscover_tasks(["app.tasks"])
+
+# Explicit include — autodiscover NU prinde fisiere cu alt nume decat tasks.py.
+# Le importam manual ca @celery_app.task din ele sa fie inregistrate la worker startup.
+# Altfel: trigger /training/trigger raspunde started, dar worker-ul respinge cu
+# "Received unregistered task of type 'train_classifier'".
+import app.tasks.document_tasks  # noqa: F401, E402
+import app.tasks.training_tasks  # noqa: F401, E402

@@ -12,6 +12,7 @@ import AdminDashboard from './pages/AdminDashboard/AdminDashboard';
 import Contabil from './pages/Contabil/Contabil';
 import ContabilDashboard from './pages/ContabilDashboard/ContabilDashboard';
 import Receptionist from './pages/Receptionist/Receptionist';
+import Generator from './pages/Generator/Generator';
 import ErrorBoundary from './components/ErrorBoundary/ErrorBoundary';
 import ChatWidget from './components/ChatWidget/ChatWidget';
 
@@ -75,6 +76,7 @@ function App() {
             <Route path="/training" element={isLoggedIn ? <Training /> : <Navigate to="/signin" />} />
             <Route path="/documents" element={isLoggedIn ? <Documents /> : <Navigate to="/signin" />} />
             <Route path="/reports" element={isLoggedIn ? <Reports /> : <Navigate to="/signin" />} />
+            <Route path="/generator" element={isLoggedIn ? <Generator /> : <Navigate to="/signin" />} />
             <Route
               path="/admin"
               element={
@@ -112,7 +114,9 @@ function App() {
               }
             />
           </Routes>
-          {isLoggedIn && <ChatWidget />}
+          {/* Djarvis (chat AI cu legislatie RM) — DOAR pentru clienti.
+              Admin/contabil/receptionist nu il vad — ei au alte instrumente. */}
+          {isLoggedIn && role === 'client' && <ChatWidget />}
         </div>
       </ErrorBoundary>
     </LanguageProvider>

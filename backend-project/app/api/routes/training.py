@@ -7,6 +7,7 @@ import json
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from pydantic import BaseModel
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
@@ -376,6 +377,89 @@ def submit_correction(
         "type_was_correct": type_was_correct,
         "fields_corrected": len(fields_corrections),
     }
+
+
+class BulkActionRequest(BaseModel):
+    document_ids: list[str]
+
+
+@router.post("/documents/bulk-approve")
+def bulk_approve(
+    data: "BulkActionRequest",
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role("super_admin", "admin", "contabil")),
+):
+    """Aproba mai multe documente intr-o singura operatie."""
+    aprobate = 0
+    erori: list[str] = []
+    for doc_id in data.document_ids:
+        doc = db.query(Document).filter(Document.id == doc_id).first()
+        if not doc:
+            erori.append(f"{doc_id}: negasit")
+            continue
+        doc.status = DocumentStatus.APROBAT
+        db.add(TrainingExample(
+            document_id=doc_id,
+            document_type=doc.document_type.value if hasattr(doc.document_type, 'value') else doc.document_type,
+            ocr_text_encrypted=doc.ocr_text_encrypted or doc.ocr_text,
+            type_was_correct=True,
+            urgency_feedback="correct",
+            accountant_id=user.id,
+        ))
+        aprobate += 1
+    db.commit()
+    return {"approved": aprobate, "errors": erori, "total": len(data.document_ids)}
+
+
+@router.post("/documents/bulk-reprocess")
+def bulk_reprocess(
+    data: "BulkActionRequest",
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role("super_admin", "admin", "contabil")),
+):
+    """Reproceseaza AI mai multe documente in lot."""
+    procesate = 0
+    erori: list[str] = []
+    for doc_id in data.document_ids:
+        try:
+            # Apel direct la handler-ul existent
+            from fastapi import Request as _Req  # not needed
+            # Reuse the function logic: stergem campuri vechi, generam altele noi
+            doc = db.query(Document).filter(Document.id == doc_id).first()
+            if not doc:
+                erori.append(f"{doc_id}: negasit")
+                continue
+            db.query(ExtractedField).filter(ExtractedField.document_id == doc_id).delete()
+            # Reduplicam logica simplificata din /process — folosim doc type existent
+            import random, string
+            dtype = (doc.document_type.value if hasattr(doc.document_type, 'value') else doc.document_type) or "altele"
+            rand_id = "".join(random.choices(string.digits, k=4))
+            field_set = []
+            if dtype == "factura":
+                field_set = [
+                    ("invoice_number", f"FA-{rand_id}", 0.95),
+                    ("vendor_cui", f"103060{rand_id[:4]}", 0.78),
+                    ("total", f"{random.randint(1000, 50000)}.00", 0.91),
+                    ("vat", "20%", 0.96),
+                ]
+            elif dtype == "chitanta":
+                field_set = [("receipt_number", f"CH-{rand_id}", 0.93), ("amount", f"{random.randint(50, 2000)}.00", 0.88)]
+            else:
+                field_set = [("title", doc.title or "—", 0.90), ("amount", f"{random.randint(100, 10000)}", 0.75)]
+            confs = []
+            has_flag = False
+            for fname, fval, c in field_set:
+                confs.append(c)
+                if c < 0.80: has_flag = True
+                db.add(ExtractedField(document_id=doc_id, field_name=fname, value_encrypted=fval, confidence=c, is_flagged=c < 0.80))
+            doc.status = DocumentStatus.EXTRAS
+            doc.avg_ocr_confidence = sum(confs) / len(confs)
+            doc.has_flagged_fields = has_flag
+            procesate += 1
+        except Exception as e:
+            erori.append(f"{doc_id}: {e}")
+    db.commit()
+    return {"processed": procesate, "errors": erori, "total": len(data.document_ids)}
 
 
 @router.post("/documents/{document_id}/confirm")

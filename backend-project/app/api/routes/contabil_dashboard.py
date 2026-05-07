@@ -13,7 +13,10 @@ from app.models.document import Document, DocumentStatus
 from app.models.accountant_client import AccountantClient
 from app.models.report import Report
 from app.models.faq import ChatConversation
+from app.models.audit_log import AuditLog
 from app.api.deps import require_role
+from fastapi import HTTPException
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/contabil/dashboard", tags=["Contabil Dashboard"])
 
@@ -160,6 +163,201 @@ def contabil_coada_urgente(
             for d in docs
         ]
     }
+
+
+@router.get("/performance")
+def contabil_performance(
+    current_user: User = Depends(require_role(UserRole.CONTABIL, UserRole.ADMIN, UserRole.SUPER_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    """Performance contabil: saptamana asta vs saptamana trecuta."""
+    cid = current_user.id
+    client_ids = _client_ids_for(db, cid)
+
+    now = datetime.now(timezone.utc)
+    week_start = now - timedelta(days=now.weekday())
+    week_start = week_start.replace(hour=0, minute=0, second=0, microsecond=0)
+    last_week_start = week_start - timedelta(days=7)
+
+    def _count_docs(start: datetime, end: datetime) -> int:
+        if not client_ids:
+            return 0
+        return db.query(func.count(Document.id)).filter(
+            Document.owner_id.in_(client_ids),
+            Document.created_at >= start,
+            Document.created_at < end,
+        ).scalar() or 0
+
+    def _count_aprobate(start: datetime, end: datetime) -> int:
+        if not client_ids:
+            return 0
+        return db.query(func.count(Document.id)).filter(
+            Document.owner_id.in_(client_ids),
+            Document.status == DocumentStatus.APROBAT.value,
+            Document.created_at >= start,
+            Document.created_at < end,
+        ).scalar() or 0
+
+    def _count_rapoarte(start: datetime, end: datetime) -> int:
+        return db.query(func.count(Report.id)).filter(
+            Report.created_by == cid,
+            Report.created_at >= start,
+            Report.created_at < end,
+        ).scalar() or 0
+
+    saptamana_asta = {
+        "documente_noi": _count_docs(week_start, now),
+        "documente_aprobate": _count_aprobate(week_start, now),
+        "rapoarte_create": _count_rapoarte(week_start, now),
+    }
+    saptamana_trecuta = {
+        "documente_noi": _count_docs(last_week_start, week_start),
+        "documente_aprobate": _count_aprobate(last_week_start, week_start),
+        "rapoarte_create": _count_rapoarte(last_week_start, week_start),
+    }
+
+    def _delta_pct(curr: int, prev: int) -> int | None:
+        if prev == 0:
+            return None if curr == 0 else 100
+        return round(((curr - prev) / prev) * 100)
+
+    return {
+        "saptamana_asta": saptamana_asta,
+        "saptamana_trecuta": saptamana_trecuta,
+        "delta_pct": {
+            "documente_noi": _delta_pct(saptamana_asta["documente_noi"], saptamana_trecuta["documente_noi"]),
+            "documente_aprobate": _delta_pct(saptamana_asta["documente_aprobate"], saptamana_trecuta["documente_aprobate"]),
+            "rapoarte_create": _delta_pct(saptamana_asta["rapoarte_create"], saptamana_trecuta["rapoarte_create"]),
+        },
+    }
+
+
+@router.get("/activity-feed")
+def contabil_activity_feed(
+    limit: int = 15,
+    current_user: User = Depends(require_role(UserRole.CONTABIL, UserRole.ADMIN, UserRole.SUPER_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    """Activitate recenta la clientii contabilului — documente noi, status changes, audit log."""
+    cid = current_user.id
+    client_ids = _client_ids_for(db, cid)
+    if not client_ids:
+        return {"events": []}
+
+    limit = max(1, min(limit, 50))
+
+    # Documente create / status schimbat in ultimele 7 zile
+    cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+    docs = (
+        db.query(Document)
+        .filter(Document.owner_id.in_(client_ids))
+        .filter(Document.created_at >= cutoff)
+        .order_by(Document.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+    # Mapa client id → nume
+    clients = db.query(User).filter(User.id.in_(client_ids)).all()
+    cmap = {c.id: (c.full_name or c.username) for c in clients}
+
+    events = []
+    for d in docs:
+        events.append({
+            "type": "document_uploaded",
+            "title": d.title or d.file_name,
+            "client_name": cmap.get(d.owner_id, "—"),
+            "owner_id": d.owner_id,
+            "document_id": d.id,
+            "status": d.status.value if hasattr(d.status, 'value') else d.status,
+            "timestamp": d.created_at.isoformat() if d.created_at else None,
+        })
+
+    return {"events": events}
+
+
+@router.get("/inactive-clients")
+def contabil_inactive_clients(
+    days_threshold: int = 14,
+    current_user: User = Depends(require_role(UserRole.CONTABIL, UserRole.ADMIN, UserRole.SUPER_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    """Clienti care nu au urcat documente noi de mai mult de N zile."""
+    cid = current_user.id
+    client_ids = _client_ids_for(db, cid)
+    if not client_ids:
+        return {"inactive": [], "threshold_days": days_threshold}
+
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days_threshold)
+    clients = db.query(User).filter(User.id.in_(client_ids)).all()
+
+    # Pentru fiecare client, ultima data cand a urcat ceva
+    last_doc_rows = (
+        db.query(Document.owner_id, func.max(Document.created_at))
+        .filter(Document.owner_id.in_(client_ids))
+        .group_by(Document.owner_id)
+        .all()
+    )
+    last_by_client = {oid: dt for oid, dt in last_doc_rows}
+
+    inactive = []
+    for c in clients:
+        ultim = last_by_client.get(c.id)
+        if not ultim or ultim < cutoff:
+            zile = (datetime.now(timezone.utc) - ultim).days if ultim else None
+            inactive.append({
+                "id": c.id,
+                "username": c.username,
+                "full_name": c.full_name,
+                "email": c.email,
+                "last_doc_at": ultim.isoformat() if ultim else None,
+                "days_since_last": zile,
+            })
+
+    inactive.sort(key=lambda x: x["days_since_last"] if x["days_since_last"] is not None else 999, reverse=True)
+    return {"inactive": inactive, "threshold_days": days_threshold}
+
+
+# === Note interne pe client ===
+
+class ClientNotesUpdate(BaseModel):
+    notes: str
+
+
+@router.get("/client/{client_id}/notes")
+def get_client_notes(
+    client_id: str,
+    current_user: User = Depends(require_role(UserRole.CONTABIL, UserRole.ADMIN, UserRole.SUPER_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    """Note interne pe care contabilul le-a notat pentru un client."""
+    link = db.query(AccountantClient).filter(
+        AccountantClient.accountant_id == current_user.id,
+        AccountantClient.client_id == client_id,
+        AccountantClient.is_active == True,
+    ).first()
+    if not link:
+        raise HTTPException(status_code=404, detail="Clientul nu este asignat contabilului")
+    return {"notes": link.internal_notes or "", "updated_at": link.updated_at.isoformat() if link.updated_at else None}
+
+
+@router.put("/client/{client_id}/notes")
+def set_client_notes(
+    client_id: str,
+    data: ClientNotesUpdate,
+    current_user: User = Depends(require_role(UserRole.CONTABIL, UserRole.ADMIN, UserRole.SUPER_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    """Salveaza note interne pentru un client (preferinte, particularitati fiscale, contact)."""
+    link = db.query(AccountantClient).filter(
+        AccountantClient.accountant_id == current_user.id,
+        AccountantClient.client_id == client_id,
+        AccountantClient.is_active == True,
+    ).first()
+    if not link:
+        raise HTTPException(status_code=404, detail="Clientul nu este asignat contabilului")
+    link.internal_notes = data.notes
+    db.commit()
+    return {"status": "ok", "notes": link.internal_notes}
 
 
 @router.get("/timeseries")

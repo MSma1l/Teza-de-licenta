@@ -65,12 +65,35 @@ async def _train_classifier(task):
 
         from app.processors.classifier import DOCUMENT_CLASSES
 
+        # Backend principal foloseste denumiri RO in DocumentType (factura, chitanta...).
+        # AI service foloseste nume EN in DOCUMENT_CLASSES. Mapam RO → EN aici, altfel
+        # toate exemplele cad la fallback "id_card" si modelul nu invata nimic.
+        RO_TO_EN = {
+            "factura": "invoice",
+            "chitanta": "receipt",
+            "contract": "contract",
+            "declaratie": "tax_declaration",
+            "stat_plata": "payroll",
+            "extras_bancar": "bank_statement",
+            "bon_fiscal": "receipt",            # bon fiscal e tot un fel de chitanta
+            "certificat": "other",
+            "proces_verbal": "other",
+            "act_constitutiv": "other",
+            "altele": "other",
+        }
+        DEFAULT_LABEL = DOCUMENT_CLASSES.index("other") if "other" in DOCUMENT_CLASSES else 6
+
         texts = []
         labels = []
         for ex in examples:
             try:
                 text = enc.decrypt(ex.ocr_text_encrypted) if enc else ex.ocr_text_encrypted
-                label = DOCUMENT_CLASSES.index(ex.document_type) if ex.document_type in DOCUMENT_CLASSES else 6
+                # Daca tipul e RO il mapam; daca e deja EN si exista, il folosim direct.
+                doc_type_en = RO_TO_EN.get(ex.document_type, ex.document_type)
+                if doc_type_en in DOCUMENT_CLASSES:
+                    label = DOCUMENT_CLASSES.index(doc_type_en)
+                else:
+                    label = DEFAULT_LABEL
                 texts.append(text)
                 labels.append(label)
             except Exception as e:

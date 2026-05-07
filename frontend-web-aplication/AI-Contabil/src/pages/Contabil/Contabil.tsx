@@ -36,6 +36,12 @@ import {
   type Conversation,
   type ChatMessage as ChatMsg,
 } from '../../api/chatApi';
+import {
+  bulkApproveDocuments,
+  bulkReprocessDocuments,
+  fetchClientNotes,
+  setClientNotes,
+} from '../../api/contabilDashboardApi';
 
 type Tab = 'clienti' | 'coada' | 'chat' | 'solicitari' | 'rapoarte';
 
@@ -201,6 +207,9 @@ function TabCoada() {
   const [loading, setLoading] = useState(true);
   const [eroare, setEroare] = useState<string | null>(null);
   const [filtruStatus, setFiltruStatus] = useState<string>('');
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState<'approve' | 'reprocess' | null>(null);
+  const [bulkFeedback, setBulkFeedback] = useState<string | null>(null);
 
   // Document selectat pentru validare (panou dreapta)
   const [docSelectat, setDocSelectat] = useState<DocumentData | null>(null);
@@ -295,11 +304,62 @@ function TabCoada() {
     }
   }
 
+  function toggleSelect(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    setSelected((prev) => {
+      if (prev.size === docs.length) return new Set();
+      return new Set(docs.map((d) => d.id));
+    });
+  }
+
+  async function bulkAproba() {
+    if (selected.size === 0) return;
+    if (!confirm(`Aprob ${selected.size} documente?`)) return;
+    setBulkBusy('approve');
+    setBulkFeedback(null);
+    try {
+      const ids = Array.from(selected);
+      const r = await bulkApproveDocuments(ids);
+      setBulkFeedback(`✓ ${r.approved}/${r.total} aprobate${r.errors.length ? ` (${r.errors.length} erori)` : ''}.`);
+      setSelected(new Set());
+      await incarcaCoada();
+    } catch (e) {
+      setBulkFeedback(e instanceof Error ? e.message : 'Eroare bulk approve');
+    } finally {
+      setBulkBusy(null);
+    }
+  }
+
+  async function bulkReproceseaza() {
+    if (selected.size === 0) return;
+    if (!confirm(`Reprocesez AI ${selected.size} documente?`)) return;
+    setBulkBusy('reprocess');
+    setBulkFeedback(null);
+    try {
+      const r = await bulkReprocessDocuments(Array.from(selected));
+      setBulkFeedback(`✓ ${r.processed}/${r.total} reprocesate.`);
+      setSelected(new Set());
+      await incarcaCoada();
+    } catch (e) {
+      setBulkFeedback(e instanceof Error ? e.message : 'Eroare bulk reprocess');
+    } finally {
+      setBulkBusy(null);
+    }
+  }
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.4fr] gap-5">
       {/* Stanga — coada */}
       <div className="bg-white rounded-xl border border-neutral-200 p-4 max-h-[78vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-3 gap-2">
           <h2 className="font-bold text-neutral-900">Coada documente</h2>
           <select
             value={filtruStatus}
@@ -313,6 +373,49 @@ function TabCoada() {
           </select>
         </div>
 
+        {/* Bulk action bar */}
+        {docs.length > 0 && (
+          <div className="flex items-center justify-between gap-2 mb-3 p-2 bg-neutral-50 rounded-md border border-neutral-200">
+            <label className="flex items-center gap-2 text-xs cursor-pointer">
+              <input
+                type="checkbox"
+                checked={selected.size === docs.length && docs.length > 0}
+                onChange={toggleSelectAll}
+              />
+              <span className="font-semibold">{selected.size > 0 ? `${selected.size} selectate` : 'Selecteaza tot'}</span>
+            </label>
+            {selected.size > 0 && (
+              <div className="flex gap-1">
+                <button
+                  onClick={bulkAproba}
+                  disabled={bulkBusy !== null}
+                  className="text-xs px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded disabled:opacity-50"
+                >
+                  {bulkBusy === 'approve' ? '...' : '✓ Aproba'}
+                </button>
+                <button
+                  onClick={bulkReproceseaza}
+                  disabled={bulkBusy !== null}
+                  className="text-xs px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded disabled:opacity-50"
+                >
+                  {bulkBusy === 'reprocess' ? '...' : '🔄 Reproc'}
+                </button>
+                <button
+                  onClick={() => setSelected(new Set())}
+                  className="text-xs px-2 py-1 bg-neutral-200 hover:bg-neutral-300 rounded"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+        {bulkFeedback && (
+          <div className="text-xs bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-md p-2 mb-2">
+            {bulkFeedback}
+          </div>
+        )}
+
         {eroare && <div className="text-sm text-red-700 bg-red-50 rounded p-2 mb-3">{eroare}</div>}
 
         {loading ? (
@@ -322,12 +425,22 @@ function TabCoada() {
         ) : (
           <div className="space-y-2">
             {docs.map((d) => (
-              <CardCoada
-                key={d.id}
-                doc={d}
-                selectat={docSelectat?.id === d.id}
-                onClick={() => selecteazaDoc(d)}
-              />
+              <div key={d.id} className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  checked={selected.has(d.id)}
+                  onChange={() => toggleSelect(d.id)}
+                  className="mt-3 shrink-0"
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <div className="flex-1 min-w-0">
+                  <CardCoada
+                    doc={d}
+                    selectat={docSelectat?.id === d.id}
+                    onClick={() => selecteazaDoc(d)}
+                  />
+                </div>
+              </div>
             ))}
           </div>
         )}
@@ -357,6 +470,66 @@ function TabCoada() {
 /* ============================================
    TAB 3 — Solicitari catre clienti
    ============================================ */
+// Template-uri rapide pentru solicitari frecvente
+const SOLICITARI_TEMPLATES: Array<{
+  id: string;
+  emoji: string;
+  label: string;
+  titlu: string;
+  tip: 'INFO' | 'WARNING' | 'URGENT';
+  mesaj: string;
+}> = [
+  {
+    id: 'extras_bancar',
+    emoji: '🏦',
+    label: 'Extras bancar lunar',
+    titlu: 'Solicitare extras bancar',
+    tip: 'INFO',
+    mesaj: 'Va rog sa transmiteti extrasul bancar pentru luna [LUNA] [ANUL], in format PDF. Termen recomandat: 5 zile lucratoare.',
+  },
+  {
+    id: 'factura_furnizor',
+    emoji: '🧾',
+    label: 'Factura furnizor lipsa',
+    titlu: 'Lipsa factura furnizor',
+    tip: 'WARNING',
+    mesaj: 'Am observat o plata in extrasul bancar pentru care nu am primit factura. Va rog sa transmiteti factura aferenta sumei [SUMA] catre [FURNIZOR] din data de [DATA].',
+  },
+  {
+    id: 'contract_munca',
+    emoji: '📋',
+    label: 'Contract de munca angajat',
+    titlu: 'Solicitare contract de munca',
+    tip: 'INFO',
+    mesaj: 'Va rog sa transmiteti copia contractului de munca pentru noul angajat [NUME PRENUME], precum si o copie a buletinului de identitate.',
+  },
+  {
+    id: 'stat_plata_lunar',
+    emoji: '💼',
+    label: 'Stat de plata + pontaj',
+    titlu: 'Solicitare pontaj luna curenta',
+    tip: 'INFO',
+    mesaj: 'Va rog sa transmiteti pontajul angajatilor pentru luna [LUNA] pentru a putea genera statele de plata si declaratia IPC21.',
+  },
+  {
+    id: 'documente_lipsa',
+    emoji: '⚠',
+    label: 'Documente lipsa pentru raport',
+    titlu: 'Documente lipsa',
+    tip: 'URGENT',
+    mesaj: 'Pentru a depune declaratia D300 / IPC21 in termen, am nevoie urgent de urmatoarele documente: [LIST]. Va rog sa le transmiteti pana pe data de [DATA].',
+  },
+  {
+    id: 'aviz_termen',
+    emoji: '⏰',
+    label: 'Aviz termen fiscal apropiat',
+    titlu: 'Termen fiscal apropiat',
+    tip: 'URGENT',
+    mesaj: 'Va aducem la cunostinta ca pe data de [DATA] expira termenul de depunere pentru [DECLARATIE]. Va rog sa pregatiti documentele aferente.',
+  },
+];
+
+
 function TabSolicitari() {
   const [clienti, setClienti] = useState<UserData[]>([]);
   const [clientId, setClientId] = useState<string>('');
@@ -369,6 +542,12 @@ function TabSolicitari() {
   useEffect(() => {
     getMyClients().then((r) => setClienti(r.users)).catch(() => {});
   }, []);
+
+  function aplicaTemplate(t: typeof SOLICITARI_TEMPLATES[number]) {
+    setTitlu(t.titlu);
+    setMesaj(t.mesaj);
+    setTip(t.tip);
+  }
 
   async function trimite() {
     if (!clientId || !titlu.trim() || !mesaj.trim()) {
@@ -417,6 +596,30 @@ function TabSolicitari() {
         Trimite o cerere catre clientul tau pentru documentele de care ai nevoie. Clientul va vedea
         solicitarea in centrul de notificari si pe mobil.
       </p>
+
+      {/* Template-uri rapide */}
+      <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-4">
+        <div className="text-xs font-bold uppercase text-indigo-800 mb-2">⚡ Template-uri rapide</div>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+          {SOLICITARI_TEMPLATES.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => aplicaTemplate(t)}
+              className="text-left p-2.5 bg-white hover:bg-indigo-100 border border-indigo-200 rounded-md transition"
+              title={t.mesaj}
+            >
+              <div className="text-lg">{t.emoji}</div>
+              <div className="text-xs font-semibold text-neutral-900">{t.label}</div>
+              <div className={`text-[10px] uppercase font-bold mt-0.5 ${
+                t.tip === 'URGENT' ? 'text-red-700' : t.tip === 'WARNING' ? 'text-amber-700' : 'text-sky-700'
+              }`}>{t.tip.toLowerCase()}</div>
+            </button>
+          ))}
+        </div>
+        <div className="text-[10px] text-neutral-500 mt-2 italic">
+          Click pentru a pre-completa formularul. Inlocuieste [LUNA], [DATA], [SUMA] etc. cu valorile reale.
+        </div>
+      </div>
 
       <div className="bg-white rounded-xl border border-neutral-200 p-5 space-y-4">
         <div>
@@ -553,32 +756,116 @@ function CardStareGoala({ text, icon = '📂' }: { text: string; icon?: string }
 }
 
 function CardClient({ client }: { client: UserData }) {
+  const [openNotes, setOpenNotes] = useState(false);
+  const [notes, setNotesState] = useState('');
+  const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [loadingNotes, setLoadingNotes] = useState(false);
+  const [savingNotes, setSavingNotes] = useState(false);
+
+  async function deschideNote() {
+    setOpenNotes(true);
+    setLoadingNotes(true);
+    try {
+      const r = await fetchClientNotes(client.id);
+      setNotesState(r.notes);
+      setSavedAt(r.updated_at);
+    } catch (e) {
+      console.warn('fetch notes failed', e);
+    } finally {
+      setLoadingNotes(false);
+    }
+  }
+
+  async function salveazaNotes() {
+    setSavingNotes(true);
+    try {
+      await setClientNotes(client.id, notes);
+      setSavedAt(new Date().toISOString());
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Eroare salvare');
+    } finally {
+      setSavingNotes(false);
+    }
+  }
+
   return (
-    <div className="bg-white rounded-xl border border-neutral-200 p-5 hover:shadow-md transition">
-      <div className="flex items-center gap-3 mb-3">
-        <div className="w-12 h-12 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center text-lg">
-          {(client.full_name || client.username || '?').charAt(0).toUpperCase()}
+    <>
+      <div className="bg-white rounded-xl border border-neutral-200 p-5 hover:shadow-md transition">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-12 h-12 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center text-lg">
+            {(client.full_name || client.username || '?').charAt(0).toUpperCase()}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="font-bold text-neutral-900 truncate">{client.full_name || client.username}</div>
+            <div className="text-xs text-neutral-500 truncate">{client.email}</div>
+          </div>
         </div>
-        <div className="flex-1 min-w-0">
-          <div className="font-bold text-neutral-900 truncate">{client.full_name || client.username}</div>
-          <div className="text-xs text-neutral-500 truncate">{client.email}</div>
+        <div className="grid grid-cols-3 gap-1.5 pt-3 border-t border-neutral-100">
+          <Link
+            to={`/documents?client=${client.id}`}
+            className="text-center text-xs px-2 py-1.5 rounded-md bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-semibold"
+          >
+            Documente
+          </Link>
+          <Link
+            to={`/reports?client=${client.id}`}
+            className="text-center text-xs px-2 py-1.5 rounded-md bg-sky-50 text-sky-700 hover:bg-sky-100 font-semibold"
+          >
+            Rapoarte
+          </Link>
+          <button
+            onClick={deschideNote}
+            className="text-center text-xs px-2 py-1.5 rounded-md bg-amber-50 text-amber-700 hover:bg-amber-100 font-semibold"
+          >
+            📝 Note
+          </button>
         </div>
       </div>
-      <div className="flex gap-2 pt-3 border-t border-neutral-100">
-        <Link
-          to={`/documents?client=${client.id}`}
-          className="flex-1 text-center text-xs px-3 py-1.5 rounded-md bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-semibold"
-        >
-          Documente
-        </Link>
-        <Link
-          to={`/reports?client=${client.id}`}
-          className="flex-1 text-center text-xs px-3 py-1.5 rounded-md bg-sky-50 text-sky-700 hover:bg-sky-100 font-semibold"
-        >
-          Rapoarte
-        </Link>
-      </div>
-    </div>
+
+      {openNotes && (
+        <div className="fixed inset-0 bg-black/45 z-50 flex items-center justify-center p-4" onClick={() => setOpenNotes(false)}>
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-neutral-900 mb-1">Note interne · {client.full_name || client.username}</h3>
+            <p className="text-xs text-neutral-500 mb-4">
+              Particularitati fiscale, contact preferat, deductibilitate, etc. Vizibile doar pentru tine.
+            </p>
+            {loadingNotes ? (
+              <p className="text-sm text-neutral-500 py-6 text-center">Se incarca...</p>
+            ) : (
+              <>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotesState(e.target.value)}
+                  rows={8}
+                  placeholder="Ex: clientul prefera contact telefonic dimineata. Lucreaza in industria IT cu cota TVA 12%..."
+                  className="w-full border border-neutral-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                />
+                {savedAt && (
+                  <div className="text-xs text-neutral-500 mt-1">
+                    Ultima actualizare: {new Date(savedAt).toLocaleString('ro')}
+                  </div>
+                )}
+                <div className="flex justify-end gap-2 mt-4">
+                  <button
+                    onClick={() => setOpenNotes(false)}
+                    className="px-4 py-2 rounded-lg text-neutral-700 hover:bg-neutral-100 font-semibold text-sm"
+                  >
+                    Inchide
+                  </button>
+                  <button
+                    onClick={salveazaNotes}
+                    disabled={savingNotes}
+                    className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm disabled:opacity-50"
+                  >
+                    {savingNotes ? 'Salvez...' : 'Salveaza note'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 

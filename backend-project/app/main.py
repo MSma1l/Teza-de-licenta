@@ -5,7 +5,7 @@ import os
 
 from app.core.config import settings
 from app.core.database import engine, Base
-from app.api.routes import auth, users, documents, reports, notifications, training, chat, two_factor, qr_login, rapoarte_sfs, admin_dashboard, public_content, contabil_dashboard, consultations
+from app.api.routes import auth, users, documents, reports, notifications, training, chat, two_factor, qr_login, rapoarte_sfs, admin_dashboard, public_content, contabil_dashboard, consultations, document_templates
 
 # Import all models so they are registered with Base
 from app.models import (  # noqa: F401
@@ -70,6 +70,7 @@ app.include_router(admin_dashboard.router, prefix="/api/v1/ac")
 app.include_router(public_content.router, prefix="/api/v1/ac")
 app.include_router(contabil_dashboard.router, prefix="/api/v1/ac")
 app.include_router(consultations.router, prefix="/api/v1/ac")
+app.include_router(document_templates.router, prefix="/api/v1/ac")
 
 
 @app.get("/api/v1/ac/health")

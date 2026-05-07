@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import String, ForeignKey, DateTime, Boolean
+from sqlalchemy import String, ForeignKey, DateTime, Boolean, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -15,7 +15,14 @@ class AccountantClient(Base):
     accountant_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False, index=True)
     client_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False, index=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Note interne ale contabilului despre client (deductibilitate, particularitati, contact preferat, etc.)
+    internal_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     assigned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
 
     accountant: Mapped["User"] = relationship("User", back_populates="clients", foreign_keys=[accountant_id])
     client: Mapped["User"] = relationship("User", back_populates="accountants", foreign_keys=[client_id])
