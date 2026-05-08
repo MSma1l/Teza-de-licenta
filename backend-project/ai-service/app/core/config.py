@@ -62,7 +62,10 @@ class Settings(BaseSettings):
     NER_MODEL_NAME: str = "bert-base-multilingual-cased"
     EMBEDDINGS_MODEL_NAME: str = "sentence-transformers/all-MiniLM-L6-v2"
     MAX_SEQUENCE_LENGTH: int = 512
-    CLASSIFIER_NUM_LABELS: int = 7
+    # 10 = len(DOCUMENT_CLASSES) din classifier.py
+    # (invoice, receipt, contract, tax_declaration, payroll, bank_statement,
+    #  id_card, passport, bank_extract, other)
+    CLASSIFIER_NUM_LABELS: int = 10
     NER_NUM_LABELS: int = 17  # 8 entity types * 2 (B/I) + O
 
     # === Training Settings ===

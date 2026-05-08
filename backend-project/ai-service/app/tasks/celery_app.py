@@ -29,6 +29,14 @@ celery_app.conf.update(
 # Auto-discover tasks (cauta tasks.py in pachet — lasam ca fallback)
 celery_app.autodiscover_tasks(["app.tasks"])
 
+# Pre-load TOATE modelele inainte de orice query — relatiile SQLAlchemy
+# (TrainingExample → Document, User → Company, etc.) au nevoie de toate clasele
+# inregistrate, altfel _check_configure crapa cu "failed to locate a name".
+from app.models import (  # noqa: F401, E402
+    user, document, audit_log, company, document_embedding,
+    extracted_field, model_version, recommendation, training_example,
+)
+
 # Explicit include — autodiscover NU prinde fisiere cu alt nume decat tasks.py.
 # Le importam manual ca @celery_app.task din ele sa fie inregistrate la worker startup.
 # Altfel: trigger /training/trigger raspunde started, dar worker-ul respinge cu

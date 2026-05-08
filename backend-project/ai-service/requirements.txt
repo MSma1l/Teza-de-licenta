@@ -37,6 +37,8 @@ PyMuPDF==1.25.3
 torch==2.5.1
 transformers==4.47.1
 sentence-transformers==3.3.1
+# accelerate e necesar pentru HuggingFace Trainer (PyTorch backend)
+accelerate>=0.26.0
 faiss-cpu==1.9.0.post1
 scikit-learn==1.6.1
 numpy==2.2.1

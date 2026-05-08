@@ -2,8 +2,6 @@
 API Routes: Training & Model management.
 """
 
-from uuid import UUID
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -65,12 +63,14 @@ async def list_models(
 ):
     """Listează versiunile modelelor."""
     versions = await get_model_versions(db, model_name)
-    return versions
+    # Convertim manual prin from_orm_model — accuracy_metrics e Text in DB,
+    # dar schema cere Dict, deci facem json.loads.
+    return [ModelVersionResponse.from_orm_model(v) for v in versions]
 
 
 @router.post("/models/{model_id}/activate")
 async def activate_model(
-    model_id: UUID,
+    model_id: str,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_role("admin")),
 ):
@@ -89,7 +89,7 @@ async def activate_model(
 
 @router.get("/models/{model_id}/metrics")
 async def model_metrics(
-    model_id: UUID,
+    model_id: str,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_role("admin", "manager")),
 ):
@@ -107,7 +107,7 @@ async def model_metrics(
     return {
         "model_name": model.model_name,
         "version": model.version,
-        "metrics": model.accuracy_metrics,
+        "metrics": model.metrics_dict(),
         "dataset_size": model.dataset_size,
         "training_date": model.training_date.isoformat(),
         "is_active": model.is_active,

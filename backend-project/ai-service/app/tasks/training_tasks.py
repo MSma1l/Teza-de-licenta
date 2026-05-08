@@ -83,11 +83,25 @@ async def _train_classifier(task):
         }
         DEFAULT_LABEL = DOCUMENT_CLASSES.index("other") if "other" in DOCUMENT_CLASSES else 6
 
+        def _decrypt_or_plain(raw: str) -> str:
+            """Incearca decriptare; daca textul e plain (sintetic) il returneaza neschimbat."""
+            if not raw:
+                return ""
+            if enc is None:
+                return raw
+            try:
+                return enc.decrypt(raw)
+            except Exception:
+                # Fallback — exemple sintetice / vechi care nu au fost criptate
+                return raw
+
         texts = []
         labels = []
         for ex in examples:
             try:
-                text = enc.decrypt(ex.ocr_text_encrypted) if enc else ex.ocr_text_encrypted
+                text = _decrypt_or_plain(ex.ocr_text_encrypted)
+                if not text or len(text.strip()) < 5:
+                    continue
                 # Daca tipul e RO il mapam; daca e deja EN si exista, il folosim direct.
                 doc_type_en = RO_TO_EN.get(ex.document_type, ex.document_type)
                 if doc_type_en in DOCUMENT_CLASSES:
@@ -110,15 +124,24 @@ async def _train_classifier(task):
 
         metrics = _fine_tune_classifier(texts, labels, output_dir, task)
 
+        # Daca fine-tune a esuat → returnam fara sa salvam ModelVersion sau sa promovam.
+        if metrics.get("error") or not Path(output_dir).exists():
+            logger.error(f"[Training] Fine-tune esuat: {metrics.get('error', 'output_dir lipsa')}")
+            return {
+                "status": "failed",
+                "reason": metrics.get("error", "model_path inexistent"),
+                "dataset_size": len(texts),
+            }
+
         task.update_state(state="EVALUATING", meta={"model": "classifier", "progress": 80})
 
-        # 4. Salvare versiune
+        # 4. Salvare versiune (accuracy_metrics e Text in DB → serializam JSON)
         model_version = ModelVersion(
             model_name="classifier",
             version=version_id,
             training_date=datetime.now(timezone.utc),
             dataset_size=len(texts),
-            accuracy_metrics=metrics,
+            accuracy_metrics=json.dumps(metrics) if metrics else None,
             model_path=output_dir,
             is_active=False,
         )
@@ -142,7 +165,8 @@ async def _train_classifier(task):
 
         should_promote = True
         if current and current.accuracy_metrics:
-            old_acc = current.accuracy_metrics.get("accuracy", 0)
+            old_metrics = current.metrics_dict()
+            old_acc = old_metrics.get("accuracy", 0)
             new_acc = metrics.get("accuracy", 0)
             if new_acc <= old_acc:
                 should_promote = False
@@ -317,12 +341,24 @@ async def _train_ner(task):
         except Exception:
             enc = None
 
+        def _decrypt_or_plain(raw: str) -> str:
+            if not raw:
+                return ""
+            if enc is None:
+                return raw
+            try:
+                return enc.decrypt(raw)
+            except Exception:
+                return raw
+
         texts = []
         entity_annotations = []
         for ex in examples:
             try:
-                text = enc.decrypt(ex.ocr_text_encrypted) if enc else ex.ocr_text_encrypted
-                corrected_raw = enc.decrypt(ex.corrected_entities_encrypted) if enc else ex.corrected_entities_encrypted
+                text = _decrypt_or_plain(ex.ocr_text_encrypted)
+                corrected_raw = _decrypt_or_plain(ex.corrected_entities_encrypted)
+                if not text or not corrected_raw:
+                    continue
                 entities = json.loads(corrected_raw)
                 if text and entities:
                     texts.append(text)
@@ -341,15 +377,24 @@ async def _train_ner(task):
 
         metrics = _fine_tune_ner(texts, entity_annotations, output_dir, task)
 
+        # Daca fine-tune a esuat → nu mai salvam ModelVersion / nu promovam
+        if metrics.get("error") or not Path(output_dir).exists():
+            logger.error(f"[Training NER] Fine-tune esuat: {metrics.get('error', 'output_dir lipsa')}")
+            return {
+                "status": "failed",
+                "reason": metrics.get("error", "model_path inexistent"),
+                "dataset_size": len(texts),
+            }
+
         task.update_state(state="EVALUATING", meta={"model": "ner_extractor", "progress": 80})
 
-        # 4. Salvare versiune
+        # 4. Salvare versiune (accuracy_metrics e Text in DB → serializam JSON)
         model_version = ModelVersion(
             model_name="ner_extractor",
             version=version_id,
             training_date=datetime.now(timezone.utc),
             dataset_size=len(texts),
-            accuracy_metrics=metrics,
+            accuracy_metrics=json.dumps(metrics) if metrics else None,
             model_path=output_dir,
             is_active=False,
         )
@@ -373,7 +418,8 @@ async def _train_ner(task):
 
         should_promote = True
         if current and current.accuracy_metrics:
-            old_f1 = current.accuracy_metrics.get("f1", 0)
+            old_metrics = current.metrics_dict()
+            old_f1 = old_metrics.get("f1", 0)
             new_f1 = metrics.get("f1", 0)
             if new_f1 <= old_f1:
                 should_promote = False

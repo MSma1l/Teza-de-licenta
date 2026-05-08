@@ -6,21 +6,24 @@ Folosite pentru re-antrenarea modelelor.
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import String, DateTime, Float, Boolean, ForeignKey, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import String, DateTime, Boolean, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
 
 
 class TrainingExample(Base):
+    """ATENTIE: schema reala in DB e creata de main backend cu varchar(36) pentru ID-uri.
+    Daca declaram aici UUID(as_uuid=True), SQLAlchemy face cast la "$2::UUID" si crapa
+    pe UPDATE/SELECT cu "operator does not exist: character varying = uuid".
+    Folosim String(36) ca sa fim consistenti cu schema reala."""
     __tablename__ = "training_examples"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
-    document_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("documents.id"), nullable=False, index=True
+    document_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("documents.id"), nullable=False, index=True
     )
 
     # Clasificare
@@ -39,8 +42,8 @@ class TrainingExample(Base):
     )
 
     # Metadata
-    accountant_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+    accountant_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id"), nullable=False
     )
     used_in_training: Mapped[bool] = mapped_column(Boolean, default=False)
 
