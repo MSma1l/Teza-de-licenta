@@ -18,33 +18,33 @@ const stages: Record<Lang, {
     title: 'Etapele crearii unui document',
     button: 'Creaza document',
     steps: [
-      { number: '01', text: 'Selectarea tipului de document', image: '/instructions/screen-1.png' },
-      { number: '02', text: 'Introducerea datelor necesare si scanarea documentului cu aplicatia mobila', image: '/instructions/screen-2.png' },
-      { number: '03', text: 'Confirmarea si validarea datelor cu aplicatia mobila', image: '/instructions/screen-3.png' },
-      { number: '04', text: 'Generarea actului si programarea la oficiu pentru semnatura', image: '/instructions/screen-4.png' },
-      { number: '05', text: 'Cererea a fost trimisa cu succes', image: '/instructions/screen-5.png' },
+      { number: '01', text: 'Selectarea tipului de document', image: '/instructions/screen-1.svg' },
+      { number: '02', text: 'Introducerea datelor necesare si scanarea documentului cu aplicatia mobila', image: '/instructions/screen-2.svg' },
+      { number: '03', text: 'Confirmarea si validarea datelor cu aplicatia mobila', image: '/instructions/screen-3.svg' },
+      { number: '04', text: 'Generarea actului si programarea la oficiu pentru semnatura', image: '/instructions/screen-4.svg' },
+      { number: '05', text: 'Cererea a fost trimisa cu succes', image: '/instructions/screen-5.svg' },
     ],
   },
   en: {
     title: 'Stages of creating a document',
     button: 'Create document',
     steps: [
-      { number: '01', text: 'Select the type of document', image: '/instructions/screen-1.png' },
-      { number: '02', text: 'Enter the necessary data and scan the document with the mobile app', image: '/instructions/screen-2.png' },
-      { number: '03', text: 'Confirmation and validation of data with the mobile app', image: '/instructions/screen-3.png' },
-      { number: '04', text: 'Generation of the act and scheduling at the office for signature', image: '/instructions/screen-4.png' },
-      { number: '05', text: 'The request was sent successfully', image: '/instructions/screen-5.png' },
+      { number: '01', text: 'Select the type of document', image: '/instructions/screen-1.svg' },
+      { number: '02', text: 'Enter the necessary data and scan the document with the mobile app', image: '/instructions/screen-2.svg' },
+      { number: '03', text: 'Confirmation and validation of data with the mobile app', image: '/instructions/screen-3.svg' },
+      { number: '04', text: 'Generation of the act and scheduling at the office for signature', image: '/instructions/screen-4.svg' },
+      { number: '05', text: 'The request was sent successfully', image: '/instructions/screen-5.svg' },
     ],
   },
   ru: {
     title: 'Этапы создания документа',
     button: 'Создать документ',
     steps: [
-      { number: '01', text: 'Выбор типа документа', image: '/instructions/screen-1.png' },
-      { number: '02', text: 'Ввод необходимых данных и сканирование документа через мобильное приложение', image: '/instructions/screen-2.png' },
-      { number: '03', text: 'Подтверждение и проверка данных через мобильное приложение', image: '/instructions/screen-3.png' },
-      { number: '04', text: 'Генерация акта и запись в офис для подписи', image: '/instructions/screen-4.png' },
-      { number: '05', text: 'Запрос успешно отправлен', image: '/instructions/screen-5.png' },
+      { number: '01', text: 'Выбор типа документа', image: '/instructions/screen-1.svg' },
+      { number: '02', text: 'Ввод необходимых данных и сканирование документа через мобильное приложение', image: '/instructions/screen-2.svg' },
+      { number: '03', text: 'Подтверждение и проверка данных через мобильное приложение', image: '/instructions/screen-3.svg' },
+      { number: '04', text: 'Генерация акта и запись в офис для подписи', image: '/instructions/screen-4.svg' },
+      { number: '05', text: 'Запрос успешно отправлен', image: '/instructions/screen-5.svg' },
     ],
   },
 };
@@ -116,18 +116,8 @@ const StagesSection = () => {
             </div>
             {/* Screenshot image */}
             <div className="relative w-full" style={{ aspectRatio: '16/9' }}>
-              <img
-                src={current.image}
-                alt={current.text}
-                className="w-full h-full object-cover object-top"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
-                  target.parentElement!.classList.add('screenshot-placeholder');
-                }}
-              />
-              {/* Fallback placeholder if image not loaded yet */}
-              <div className="screenshot-fallback absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-[#eef2ff] to-[#e0f2fe]">
+              {/* Fallback placeholder — pe fundal. Apare doar daca imaginea nu se incarca. */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-[#eef2ff] to-[#e0f2fe] z-0">
                 <span className="font-heading text-[4rem] font-bold text-[#4f46e5]/10">
                   {current.number}
                 </span>
@@ -135,6 +125,14 @@ const StagesSection = () => {
                   {current.text}
                 </span>
               </div>
+              <img
+                src={current.image}
+                alt={current.text}
+                className="absolute inset-0 w-full h-full object-cover object-top z-10"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
             </div>
           </div>
         </div>

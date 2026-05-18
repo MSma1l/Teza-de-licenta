@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" font-family="Inter, system-ui, sans-serif">
+  <defs>
+    <linearGradient id="bg1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f8fafc"/>
+      <stop offset="1" stop-color="#eef2ff"/>
+    </linearGradient>
+    <linearGradient id="cardSel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#eef2ff"/>
+      <stop offset="1" stop-color="#e0e7ff"/>
+    </linearGradient>
+    <filter id="shadow1" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#1e1b4b" flood-opacity="0.08"/>
+    </filter>
+  </defs>
+
+  <rect width="1600" height="900" fill="url(#bg1)"/>
+
+  <!-- Page header -->
+  <text x="80" y="100" font-size="36" font-weight="700" fill="#0f172a">Selecteaza tipul de document</text>
+  <text x="80" y="138" font-size="18" fill="#64748b">Alege ce vrei sa generezi — completarea se face automat cu AI</text>
+
+  <!-- Search bar -->
+  <g filter="url(#shadow1)">
+    <rect x="80" y="170" width="1440" height="56" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+  </g>
+  <circle cx="120" cy="198" r="10" fill="none" stroke="#94a3b8" stroke-width="3"/>
+  <line x1="128" y1="206" x2="138" y2="216" stroke="#94a3b8" stroke-width="3" stroke-linecap="round"/>
+  <text x="160" y="205" font-size="16" fill="#94a3b8">Cauta tip document... (factura, chitanta, contract)</text>
+
+  <!-- Cards grid: 3 cols x 2 rows -->
+  <!-- Card 1: Factura (SELECTED) -->
+  <g filter="url(#shadow1)">
+    <rect x="80" y="270" width="460" height="240" rx="20" fill="url(#cardSel)" stroke="#4f46e5" stroke-width="3"/>
+  </g>
+  <rect x="100" y="290" width="60" height="60" rx="14" fill="#4f46e5"/>
+  <path d="M 120 308 L 140 308 L 140 332 L 120 332 Z M 124 314 L 136 314 M 124 320 L 136 320 M 124 326 L 132 326" stroke="#ffffff" stroke-width="2" fill="none"/>
+  <text x="100" y="390" font-size="26" font-weight="700" fill="#0f172a">Factura</text>
+  <text x="100" y="420" font-size="15" fill="#475569">Factura fiscala TVA 20%</text>
+  <text x="100" y="442" font-size="15" fill="#475569">pentru vanzare bunuri/servicii</text>
+  <rect x="100" y="465" width="92" height="28" rx="14" fill="#4f46e5"/>
+  <text x="146" y="484" font-size="13" font-weight="600" fill="#ffffff" text-anchor="middle">Selectat</text>
+
+  <!-- Card 2: Chitanta -->
+  <g filter="url(#shadow1)">
+    <rect x="570" y="270" width="460" height="240" rx="20" fill="#ffffff" stroke="#e2e8f0"/>
+  </g>
+  <rect x="590" y="290" width="60" height="60" rx="14" fill="#fef3c7"/>
+  <text x="620" y="328" font-size="28" text-anchor="middle">$</text>
+  <text x="590" y="390" font-size="26" font-weight="700" fill="#0f172a">Chitanta</text>
+  <text x="590" y="420" font-size="15" fill="#64748b">Incasare numerar</text>
+  <text x="590" y="442" font-size="15" fill="#64748b">de la client</text>
+
+  <!-- Card 3: Contract -->
+  <g filter="url(#shadow1)">
+    <rect x="1060" y="270" width="460" height="240" rx="20" fill="#ffffff" stroke="#e2e8f0"/>
+  </g>
+  <rect x="1080" y="290" width="60" height="60" rx="14" fill="#dbeafe"/>
+  <path d="M 1095 305 L 1125 305 L 1125 340 L 1095 340 Z M 1100 315 L 1120 315 M 1100 322 L 1120 322 M 1100 329 L 1115 329" stroke="#3b82f6" stroke-width="2" fill="none"/>
+  <text x="1080" y="390" font-size="26" font-weight="700" fill="#0f172a">Contract</text>
+  <text x="1080" y="420" font-size="15" fill="#64748b">Contract prestari servicii</text>
+  <text x="1080" y="442" font-size="15" fill="#64748b">intre doua parti</text>
+
+  <!-- Card 4: Stat plata -->
+  <g filter="url(#shadow1)">
+    <rect x="80" y="540" width="460" height="240" rx="20" fill="#ffffff" stroke="#e2e8f0"/>
+  </g>
+  <rect x="100" y="560" width="60" height="60" rx="14" fill="#d1fae5"/>
+  <path d="M 115 582 L 145 582 M 115 590 L 145 590 M 115 598 L 145 598 M 115 606 L 145 606" stroke="#10b981" stroke-width="2.5" stroke-linecap="round"/>
+  <text x="100" y="660" font-size="26" font-weight="700" fill="#0f172a">Stat de plata</text>
+  <text x="100" y="690" font-size="15" fill="#64748b">Salariu cu IVS 12% +</text>
+  <text x="100" y="712" font-size="15" fill="#64748b">CAS 6% + CAM 9%</text>
+
+  <!-- Card 5: Aviz -->
+  <g filter="url(#shadow1)">
+    <rect x="570" y="540" width="460" height="240" rx="20" fill="#ffffff" stroke="#e2e8f0"/>
+  </g>
+  <rect x="590" y="560" width="60" height="60" rx="14" fill="#fce7f3"/>
+  <path d="M 605 590 L 615 580 L 635 580 L 645 590 L 645 605 L 605 605 Z" fill="#ec4899" opacity="0.8"/>
+  <circle cx="615" cy="605" r="4" fill="#ec4899"/>
+  <circle cx="635" cy="605" r="4" fill="#ec4899"/>
+  <text x="590" y="660" font-size="26" font-weight="700" fill="#0f172a">Aviz</text>
+  <text x="590" y="690" font-size="15" fill="#64748b">Aviz de insotire</text>
+  <text x="590" y="712" font-size="15" fill="#64748b">a marfii / transport</text>
+
+  <!-- Card 6: Ordin plata -->
+  <g filter="url(#shadow1)">
+    <rect x="1060" y="540" width="460" height="240" rx="20" fill="#ffffff" stroke="#e2e8f0"/>
+  </g>
+  <rect x="1080" y="560" width="60" height="60" rx="14" fill="#e0e7ff"/>
+  <path d="M 1095 580 L 1115 590 L 1095 600 M 1115 590 L 1135 590" stroke="#6366f1" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <path d="M 1135 595 L 1115 605 L 1135 615 M 1135 605 L 1115 605" stroke="#6366f1" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <text x="1080" y="660" font-size="26" font-weight="700" fill="#0f172a">Ordin de plata</text>
+  <text x="1080" y="690" font-size="15" fill="#64748b">Transfer bancar</text>
+  <text x="1080" y="712" font-size="15" fill="#64748b">IBAN catre IBAN</text>
+
+  <!-- CTA -->
+  <g filter="url(#shadow1)">
+    <rect x="1280" y="810" width="240" height="56" rx="28" fill="#4f46e5"/>
+  </g>
+  <text x="1400" y="846" font-size="16" font-weight="700" fill="#ffffff" text-anchor="middle">Continua  →</text>
+</svg>

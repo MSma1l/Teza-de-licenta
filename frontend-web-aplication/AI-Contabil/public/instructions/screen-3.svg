@@ -1,0 +1,145 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" font-family="Inter, system-ui, sans-serif">
+  <defs>
+    <linearGradient id="bg3" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f8fafc"/>
+      <stop offset="1" stop-color="#ecfdf5"/>
+    </linearGradient>
+    <linearGradient id="phoneGrad3" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#064e3b"/>
+      <stop offset="1" stop-color="#022c22"/>
+    </linearGradient>
+    <filter id="shadow3" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#064e3b" flood-opacity="0.1"/>
+    </filter>
+    <filter id="shadowPhone3" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="20" stdDeviation="25" flood-color="#064e3b" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <rect width="1600" height="900" fill="url(#bg3)"/>
+
+  <!-- Header -->
+  <text x="80" y="85" font-size="32" font-weight="700" fill="#0f172a">Verifica datele extrase</text>
+  <text x="80" y="118" font-size="16" fill="#64748b">AI-ul a procesat documentul · confirma datele de pe telefon</text>
+
+  <!-- Confidence badge -->
+  <g filter="url(#shadow3)"><rect x="80" y="150" width="240" height="44" rx="22" fill="#ffffff" stroke="#10b981" stroke-width="2"/></g>
+  <circle cx="105" cy="172" r="9" fill="#10b981"/>
+  <path d="M 100 172 L 104 176 L 110 169" stroke="#ffffff" stroke-width="2.5" fill="none"/>
+  <text x="125" y="178" font-size="14" font-weight="700" fill="#065f46">OCR confidence: 94%</text>
+
+  <!-- Extracted data table -->
+  <g filter="url(#shadow3)">
+    <rect x="80" y="220" width="900" height="580" rx="20" fill="#ffffff" stroke="#e2e8f0"/>
+  </g>
+  <text x="110" y="260" font-size="20" font-weight="700" fill="#0f172a">Date extrase</text>
+  <line x1="110" y1="280" x2="950" y2="280" stroke="#e2e8f0"/>
+
+  <!-- Rows -->
+  <g font-size="14">
+    <!-- Row 1 -->
+    <text x="110" y="318" fill="#64748b">Numar factura</text>
+    <text x="320" y="318" font-weight="600" fill="#0f172a">FA-2026-0142</text>
+    <circle cx="940" cy="312" r="10" fill="#10b981"/>
+    <path d="M 935 312 L 939 316 L 946 308" stroke="#ffffff" stroke-width="2" fill="none"/>
+    <line x1="110" y1="338" x2="950" y2="338" stroke="#f1f5f9"/>
+
+    <!-- Row 2 -->
+    <text x="110" y="368" fill="#64748b">Data emitere</text>
+    <text x="320" y="368" font-weight="600" fill="#0f172a">18 mai 2026</text>
+    <circle cx="940" cy="362" r="10" fill="#10b981"/>
+    <path d="M 935 362 L 939 366 L 946 358" stroke="#ffffff" stroke-width="2" fill="none"/>
+    <line x1="110" y1="388" x2="950" y2="388" stroke="#f1f5f9"/>
+
+    <!-- Row 3 -->
+    <text x="110" y="418" fill="#64748b">Furnizor</text>
+    <text x="320" y="418" font-weight="600" fill="#0f172a">Compania Mea SRL · 1010600000000</text>
+    <circle cx="940" cy="412" r="10" fill="#10b981"/>
+    <path d="M 935 412 L 939 416 L 946 408" stroke="#ffffff" stroke-width="2" fill="none"/>
+    <line x1="110" y1="438" x2="950" y2="438" stroke="#f1f5f9"/>
+
+    <!-- Row 4 -->
+    <text x="110" y="468" fill="#64748b">Cumparator</text>
+    <text x="320" y="468" font-weight="600" fill="#0f172a">Beta Trade SRL · 1003600123456</text>
+    <circle cx="940" cy="462" r="10" fill="#10b981"/>
+    <path d="M 935 462 L 939 466 L 946 458" stroke="#ffffff" stroke-width="2" fill="none"/>
+    <line x1="110" y1="488" x2="950" y2="488" stroke="#f1f5f9"/>
+
+    <!-- Row 5: lower confidence - amber -->
+    <text x="110" y="518" fill="#64748b">Adresa cumparator</text>
+    <text x="320" y="518" font-weight="600" fill="#0f172a">mun. Balti, str. Independentei 25</text>
+    <circle cx="940" cy="512" r="10" fill="#f59e0b"/>
+    <text x="940" y="517" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">!</text>
+    <line x1="110" y1="538" x2="950" y2="538" stroke="#f1f5f9"/>
+
+    <!-- Row 6 -->
+    <text x="110" y="568" fill="#64748b">Suma fara TVA</text>
+    <text x="320" y="568" font-weight="600" fill="#0f172a">5,000.00 MDL</text>
+    <circle cx="940" cy="562" r="10" fill="#10b981"/>
+    <path d="M 935 562 L 939 566 L 946 558" stroke="#ffffff" stroke-width="2" fill="none"/>
+    <line x1="110" y1="588" x2="950" y2="588" stroke="#f1f5f9"/>
+
+    <!-- Row 7 -->
+    <text x="110" y="618" fill="#64748b">TVA 20%</text>
+    <text x="320" y="618" font-weight="600" fill="#0f172a">1,000.00 MDL</text>
+    <circle cx="940" cy="612" r="10" fill="#10b981"/>
+    <path d="M 935 612 L 939 616 L 946 608" stroke="#ffffff" stroke-width="2" fill="none"/>
+    <line x1="110" y1="638" x2="950" y2="638" stroke="#f1f5f9"/>
+
+    <!-- Row 8: total -->
+    <text x="110" y="678" font-weight="700" fill="#0f172a" font-size="16">TOTAL</text>
+    <text x="320" y="678" font-weight="800" fill="#4f46e5" font-size="18">6,000.00 MDL</text>
+    <circle cx="940" cy="672" r="10" fill="#10b981"/>
+    <path d="M 935 672 L 939 676 L 946 668" stroke="#ffffff" stroke-width="2" fill="none"/>
+  </g>
+
+  <!-- Legend -->
+  <circle cx="120" cy="745" r="6" fill="#10b981"/>
+  <text x="135" y="750" font-size="12" fill="#64748b">Confidence &gt; 85%</text>
+  <circle cx="280" cy="745" r="6" fill="#f59e0b"/>
+  <text x="295" y="750" font-size="12" fill="#64748b">Verifica manual</text>
+
+  <!-- Phone mockup -->
+  <g filter="url(#shadowPhone3)">
+    <rect x="1110" y="180" width="340" height="640" rx="44" fill="url(#phoneGrad3)"/>
+  </g>
+  <rect x="1130" y="200" width="300" height="600" rx="28" fill="#ffffff"/>
+  <rect x="1240" y="200" width="80" height="22" rx="11" fill="#064e3b"/>
+
+  <!-- Phone header -->
+  <text x="1280" y="260" font-size="14" font-weight="700" fill="#0f172a" text-anchor="middle">Confirma datele</text>
+  <text x="1280" y="282" font-size="11" fill="#64748b" text-anchor="middle">Factura FA-2026-0142</text>
+
+  <!-- Mini summary cards -->
+  <rect x="1150" y="305" width="260" height="58" rx="10" fill="#f0fdf4" stroke="#bbf7d0"/>
+  <text x="1165" y="324" font-size="9" fill="#15803d" font-weight="700">CUMPARATOR</text>
+  <text x="1165" y="345" font-size="13" font-weight="600" fill="#064e3b">Beta Trade SRL</text>
+  <text x="1165" y="358" font-size="10" fill="#15803d">IDNO 1003600123456</text>
+
+  <rect x="1150" y="375" width="260" height="58" rx="10" fill="#f0fdf4" stroke="#bbf7d0"/>
+  <text x="1165" y="394" font-size="9" fill="#15803d" font-weight="700">DATA · NUMAR</text>
+  <text x="1165" y="415" font-size="13" font-weight="600" fill="#064e3b">18.05.2026 · FA-0142</text>
+
+  <rect x="1150" y="445" width="260" height="58" rx="10" fill="#fffbeb" stroke="#fde68a"/>
+  <text x="1165" y="464" font-size="9" fill="#b45309" font-weight="700">VERIFICA · ADRESA</text>
+  <text x="1165" y="485" font-size="12" font-weight="600" fill="#92400e">str. Independentei 25</text>
+
+  <rect x="1150" y="515" width="260" height="80" rx="10" fill="#eef2ff" stroke="#c7d2fe"/>
+  <text x="1165" y="538" font-size="9" fill="#4338ca" font-weight="700">TOTAL DE INCASAT</text>
+  <text x="1280" y="572" font-size="24" font-weight="800" fill="#4f46e5" text-anchor="middle">6,000.00 MDL</text>
+  <text x="1280" y="588" font-size="9" fill="#6366f1" text-anchor="middle">subtotal 5,000 + TVA 1,000</text>
+
+  <!-- Action buttons -->
+  <rect x="1150" y="620" width="125" height="50" rx="10" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="1212" y="650" font-size="13" font-weight="600" fill="#475569" text-anchor="middle">Modifica</text>
+
+  <rect x="1285" y="620" width="125" height="50" rx="10" fill="#10b981"/>
+  <text x="1347" y="650" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">Confirma  ✓</text>
+
+  <!-- Info note -->
+  <text x="1280" y="700" font-size="10" fill="#64748b" text-anchor="middle">Dupa confirmare se genereaza PDF-ul</text>
+  <text x="1280" y="715" font-size="10" fill="#64748b" text-anchor="middle">si poti programa intalnirea cu contabilul</text>
+
+  <!-- Home indicator -->
+  <rect x="1230" y="775" width="100" height="4" rx="2" fill="#cbd5e1"/>
+</svg>

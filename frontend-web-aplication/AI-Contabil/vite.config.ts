@@ -27,5 +27,16 @@ export default defineConfig({
     warmup: {
       clientFiles: ['./src/main.tsx', './src/App.tsx'],
     },
+    // Docker Desktop Windows nu propaga inotify events din host (Windows) in
+    // container (Linux), deci HMR nativ nu prinde schimbarile facute din IDE.
+    // Polling la 1s rezolva — costul CPU e neglijabil pt un proiect de marimea
+    // asta. Daca rulezi Vite nativ pe Linux/Mac, poti scoate "watch".
+    watch: {
+      usePolling: true,
+      interval: 1000,
+    },
+    host: '0.0.0.0',
+    port: 5173,
+    strictPort: true,
   },
 })

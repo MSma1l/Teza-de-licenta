@@ -87,6 +87,7 @@ const Navbar = ({ isLoggedIn = false, showNavLinks = true }: NavbarProps) => {
   const role = (user?.role || '').toLowerCase();
   const isContabil = role === 'contabil';
   const isAdmin = role === 'admin' || role === 'super_admin';
+  const isClient = role === 'client';
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -127,17 +128,19 @@ const Navbar = ({ isLoggedIn = false, showNavLinks = true }: NavbarProps) => {
         <div className="flex items-center gap-3 max-md:hidden">
           {isLoggedIn ? (
             <>
-              {/* TOTI: Documente */}
-              <div
-                className={iconBtnClass}
-                onClick={() => navigate('/documents')}
-                title={tr.docs}
-              >
-                <DescriptionIcon />
-              </div>
+              {/* CLIENT + ADMIN: Documente (contabilul si receptionistul lucreaza din Coada) */}
+              {(isClient || isAdmin) && (
+                <div
+                  className={iconBtnClass}
+                  onClick={() => navigate('/documents')}
+                  title={tr.docs}
+                >
+                  <DescriptionIcon />
+                </div>
+              )}
 
-              {/* CONTABIL + CLIENT + RECEPTIONIST: Generator documente (PDF) */}
-              {!isAdmin && (
+              {/* CLIENT: Generator documente (factura, chitanta, contract, stat de plata) */}
+              {isClient && (
                 <div
                   className={iconBtnClass}
                   onClick={() => navigate('/generator')}
@@ -253,9 +256,16 @@ const Navbar = ({ isLoggedIn = false, showNavLinks = true }: NavbarProps) => {
 
             {isLoggedIn ? (
               <>
-                <button onClick={() => { navigate('/documents'); setMobileMenuOpen(false); }} className="flex items-center gap-3 py-3 px-4 rounded-lg hover:bg-neutral-100 text-neutral-600 text-left cursor-pointer">
-                  <DescriptionIcon /> {tr.docs}
-                </button>
+                {(isClient || isAdmin) && (
+                  <button onClick={() => { navigate('/documents'); setMobileMenuOpen(false); }} className="flex items-center gap-3 py-3 px-4 rounded-lg hover:bg-neutral-100 text-neutral-600 text-left cursor-pointer">
+                    <DescriptionIcon /> {tr.docs}
+                  </button>
+                )}
+                {isClient && (
+                  <button onClick={() => { navigate('/generator'); setMobileMenuOpen(false); }} className="flex items-center gap-3 py-3 px-4 rounded-lg hover:bg-neutral-100 text-neutral-600 text-left cursor-pointer">
+                    <NoteAddOutlinedIcon /> Generator
+                  </button>
+                )}
                 {(isContabil || isAdmin) && (
                   <button onClick={() => { navigate('/contabil'); setMobileMenuOpen(false); }} className="flex items-center gap-3 py-3 px-4 rounded-lg hover:bg-neutral-100 text-neutral-600 text-left cursor-pointer">
                     <InboxIcon /> {tr.queue}
@@ -298,5 +308,6 @@ const Navbar = ({ isLoggedIn = false, showNavLinks = true }: NavbarProps) => {
 
 export default Navbar;
 
-// Marca: client = 1 iconita (Documente). contabil = +Coada +Rapoarte. admin = +Antrenare +AdminPanel.
-// Pentru ca rolurile in DB sunt UPPERCASE (CLIENT/CONTABIL/ADMIN), comparam mereu cu .toLowerCase().
+// Marca: client = Documente + Generator. contabil/receptionist = Coada + Rapoarte (fara Documente/Generator).
+// admin = Documente + Coada + Rapoarte + Antrenare + AdminPanel.
+// Rolurile in DB sunt UPPERCASE (CLIENT/CONTABIL/ADMIN/RECEPTIONIST); comparam case-insensitive.
