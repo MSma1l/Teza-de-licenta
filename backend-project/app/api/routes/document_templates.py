@@ -16,10 +16,12 @@ Toate genereaza PDF (reportlab) si optional salveaza ca Document in DB
 from __future__ import annotations
 
 import io
+import os
 from datetime import datetime, date
-from typing import Literal
+from typing import Any, Literal
 from decimal import Decimal
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
@@ -648,3 +650,42 @@ PLAN_CONTURI_RM = [
 def get_plan_conturi(current_user: User = Depends(get_current_user)):
     """Plan de conturi simplificat RM (referinta pentru note contabile)."""
     return {"items": PLAN_CONTURI_RM}
+
+
+# ============================================
+# === AI auto-fill (proxy spre Djarvis) =======
+# ============================================
+
+AI_SERVICE_URL = os.getenv("AI_SERVICE_URL", "http://ai-service:3778")
+DJARVIS_TIMEOUT = float(os.getenv("DJARVIS_TIMEOUT", "90"))
+
+
+class AiGeneratePayload(BaseModel):
+    form_type: Literal["factura", "chitanta", "contract", "stat_plata", "aviz", "ordin_plata"]
+    prompt: str = Field(min_length=3, max_length=2000)
+
+
+@router.post("/ai-generate")
+def ai_generate_form(
+    p: AiGeneratePayload,
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Auto-completare formular cu Djarvis. Userul scrie un prompt in limbaj
+    natural (ex: 'factura catre Beta SRL pe 5000 MDL servicii IT'), Djarvis
+    intoarce JSON cu campurile populate. Frontend-ul le pune in formular.
+    """
+    payload = {"form_type": p.form_type, "prompt": p.prompt}
+    try:
+        with httpx.Client(timeout=DJARVIS_TIMEOUT) as c:
+            r = c.post(f"{AI_SERVICE_URL}/api/v1/agent/generate-form", json=payload)
+            if r.status_code == 503:
+                raise HTTPException(
+                    status_code=503,
+                    detail="Asistentul AI nu e disponibil acum (modelul se incarca). Incearca peste 1 minut.",
+                )
+            if r.status_code >= 400:
+                err = r.json().get("detail") if r.headers.get("content-type", "").startswith("application/json") else r.text
+                raise HTTPException(status_code=r.status_code, detail=err or "Eroare AI")
+            return r.json()
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=502, detail=f"AI service indisponibil: {e}")

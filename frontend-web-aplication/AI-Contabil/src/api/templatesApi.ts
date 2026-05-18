@@ -1,5 +1,5 @@
 /* ============================================
-   TEMPLATES API — generare PDF + calculatoare 1C-like
+   TEMPLATES API — generare PDF + calculatoare contabile
    ============================================ */
 const API_BASE = (import.meta.env.VITE_API_URL as string) || 'http://localhost:3777/api/v1/ac';
 
@@ -108,5 +108,39 @@ export interface PlanConturiItem {
 export async function fetchPlanConturi(): Promise<{ items: PlanConturiItem[] }> {
   const r = await fetch(`${API_BASE}/templates/servicii/plan-conturi`, { headers: auth() });
   if (!r.ok) throw new Error('Eroare plan conturi');
+  return r.json();
+}
+
+// ============================================
+// === AI auto-completare formulare ===========
+// ============================================
+
+export type GeneratorFormType =
+  | 'factura' | 'chitanta' | 'contract'
+  | 'stat_plata' | 'aviz' | 'ordin_plata';
+
+export interface AiGenerateResponse {
+  form_type: GeneratorFormType;
+  fields: Record<string, unknown>;
+  used_prompt: string;
+  model: string;
+}
+
+export async function aiGenerateForm(
+  form_type: GeneratorFormType,
+  prompt: string,
+): Promise<AiGenerateResponse> {
+  const r = await fetch(`${API_BASE}/templates/ai-generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...auth() },
+    body: JSON.stringify({ form_type, prompt }),
+  });
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    const detail = err.detail
+      ? Array.isArray(err.detail) ? err.detail.map((d: { msg: string }) => d.msg).join(', ') : err.detail
+      : `HTTP ${r.status}`;
+    throw new Error(detail);
+  }
   return r.json();
 }

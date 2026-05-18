@@ -1,5 +1,5 @@
 /* ============================================
-   GENERATOR DE DOCUMENTE + SERVICII 1C
+   GENERATOR DE DOCUMENTE + CALCULATOARE CONTABILE
 
    Disponibil pentru contabil si client. Generare PDF pe loc pentru:
      - Factura fiscala
@@ -8,7 +8,9 @@
      - Stat de plata (cu calcul automat fiscal RM)
      - Aviz de insotire marfa
      - Ordin de plata
-   Plus mini-servicii 1C: calc salariu, calc TVA, plan de conturi.
+   Plus calculatoare contabile: calc salariu, calc TVA, plan de conturi.
+   Fiecare formular are auto-completare prin AI (Djarvis): userul descrie
+   in limbaj natural ce vrea, AI-ul extrage campurile si le populeaza.
    ============================================ */
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -18,10 +20,12 @@ import {
   calcSalariu,
   calcTva,
   fetchPlanConturi,
+  aiGenerateForm,
   type FacturaItem,
   type CalcSalariu,
   type CalcTva,
   type PlanConturiItem,
+  type GeneratorFormType,
 } from '../../api/templatesApi';
 
 type Tab =
@@ -48,7 +52,7 @@ const Generator = () => {
         <header className="mb-6">
           <h1 className="text-3xl font-bold text-neutral-900">Generator documente</h1>
           <p className="text-sm text-neutral-600">
-            Sabloane de documente si servicii contabile 1C-like, cu calcul automat conform legislatiei RM.
+            Sabloane contabile cu calcul automat conform legislatiei RM. Foloseste bara AI ca sa completezi formularul scriind in cuvinte ce vrei.
           </p>
         </header>
 
@@ -66,7 +70,7 @@ const Generator = () => {
             ].map((b) => (
               <SideBtn key={b.id} active={tab === b.id} onClick={() => change(b.id as Tab)} icon={b.icon} label={b.label} />
             ))}
-            <div className="text-[10px] font-bold text-neutral-500 uppercase mb-2 px-2 mt-4">Servicii 1C</div>
+            <div className="text-[10px] font-bold text-neutral-500 uppercase mb-2 px-2 mt-4">Calculatoare contabile</div>
             {[
               { id: 'calc_salariu', icon: '🧮', label: 'Calculator salariu' },
               { id: 'calc_tva', icon: '%', label: 'Calculator TVA' },
@@ -141,9 +145,39 @@ function FormFactura() {
     }
   }
 
+  function applyAi(f: Record<string, unknown>) {
+    if (f.serie != null) setSerie(pickStr(f, 'serie', serie));
+    if (f.numar != null) setNumar(pickStr(f, 'numar', numar));
+    if (f.data != null) setData(pickStr(f, 'data', data));
+    if (f.vendor_nume != null) setVendorNume(pickStr(f, 'vendor_nume', vendorNume));
+    if (f.vendor_cui != null) setVendorCui(pickStr(f, 'vendor_cui', vendorCui));
+    if (f.vendor_adresa != null) setVendorAdresa(pickStr(f, 'vendor_adresa', vendorAdresa));
+    if (f.client_nume != null) setClientNume(pickStr(f, 'client_nume'));
+    if (f.client_cui != null) setClientCui(pickStr(f, 'client_cui'));
+    if (f.client_adresa != null) setClientAdresa(pickStr(f, 'client_adresa'));
+    if (f.note != null) setNote(pickStr(f, 'note'));
+    if (Array.isArray(f.items) && f.items.length > 0) {
+      const mapped: FacturaItem[] = (f.items as unknown[]).map((it) => {
+        const o = (it && typeof it === 'object' ? it : {}) as Record<string, unknown>;
+        return {
+          denumire: pickStr(o, 'denumire'),
+          cantitate: pickNum(o, 'cantitate', 1),
+          pret_unitar: pickNum(o, 'pret_unitar', 0),
+          cota_tva: pickNum(o, 'cota_tva', 20),
+        };
+      });
+      setItems(mapped);
+    }
+  }
+
   return (
     <div>
       <h2 className="text-xl font-bold text-neutral-900 mb-4">🧾 Factura fiscala</h2>
+      <AIPromptBar
+        formType="factura"
+        placeholder="ex: factura catre Beta Trade SRL pentru servicii consultanta IT 5000 MDL"
+        onResult={applyAi}
+      />
       <div className="grid grid-cols-3 gap-3 mb-3">
         <Field label="Seria" value={serie} onChange={setSerie} />
         <Field label="Numar" value={numar} onChange={setNumar} />
@@ -214,9 +248,22 @@ function FormChitanta() {
     } catch (e) { setErr(e instanceof Error ? e.message : 'Eroare'); } finally { setBusy(false); }
   }
 
+  function applyAi(f: Record<string, unknown>) {
+    if (f.numar != null) setNumar(pickStr(f, 'numar', numar));
+    if (f.data != null) setData(pickStr(f, 'data', data));
+    if (f.suma != null) setSuma(String(pickNum(f, 'suma', 0)));
+    if (f.de_la != null) setDeLa(pickStr(f, 'de_la'));
+    if (f.pentru != null) setPentru(pickStr(f, 'pentru'));
+  }
+
   return (
     <div>
       <h2 className="text-xl font-bold mb-4">💵 Chitanta</h2>
+      <AIPromptBar
+        formType="chitanta"
+        placeholder="ex: chitanta 1500 MDL de la Ion Popescu pentru consultanta luna mai"
+        onResult={applyAi}
+      />
       <div className="grid grid-cols-2 gap-3">
         <Field label="Numar *" value={numar} onChange={setNumar} />
         <Field label="Data *" value={data} onChange={setData} type="date" />
@@ -253,9 +300,30 @@ function FormContract() {
     } catch (e) { setErr(e instanceof Error ? e.message : 'Eroare'); } finally { setBusy(false); }
   }
 
+  function applyAi(f: Record<string, unknown>) {
+    setD((p) => ({
+      ...p,
+      numar: f.numar != null ? pickStr(f, 'numar', p.numar) : p.numar,
+      data: f.data != null ? pickStr(f, 'data', p.data) : p.data,
+      parte_a_nume: f.parte_a_nume != null ? pickStr(f, 'parte_a_nume') : p.parte_a_nume,
+      parte_a_cui: f.parte_a_cui != null ? pickStr(f, 'parte_a_cui') : p.parte_a_cui,
+      parte_b_nume: f.parte_b_nume != null ? pickStr(f, 'parte_b_nume') : p.parte_b_nume,
+      parte_b_cui: f.parte_b_cui != null ? pickStr(f, 'parte_b_cui') : p.parte_b_cui,
+      obiect: f.obiect != null ? pickStr(f, 'obiect') : p.obiect,
+      valoare: f.valoare != null ? String(pickNum(f, 'valoare', 0)) : p.valoare,
+      durata: f.durata != null ? pickStr(f, 'durata', p.durata) : p.durata,
+      clauze_extra: f.clauze_extra != null ? pickStr(f, 'clauze_extra') : p.clauze_extra,
+    }));
+  }
+
   return (
     <div>
       <h2 className="text-xl font-bold mb-4">📜 Contract prestari servicii</h2>
+      <AIPromptBar
+        formType="contract"
+        placeholder="ex: contract intre Compania Mea SRL si Beta Trade SRL pentru consultanta contabila 60000 MDL pe 12 luni"
+        onResult={applyAi}
+      />
       <div className="grid grid-cols-2 gap-3">
         <Field label="Numar *" value={d.numar} onChange={set('numar')} />
         <Field label="Data *" value={d.data} onChange={set('data')} type="date" />
@@ -302,9 +370,27 @@ function FormStatPlata() {
     } catch (e) { setErr(e instanceof Error ? e.message : 'Eroare'); } finally { setBusy(false); }
   }
 
+  function applyAi(f: Record<string, unknown>) {
+    setD((p) => ({
+      ...p,
+      luna: f.luna != null ? pickStr(f, 'luna', p.luna) : p.luna,
+      angajat_nume: f.angajat_nume != null ? pickStr(f, 'angajat_nume') : p.angajat_nume,
+      angajat_idnp: f.angajat_idnp != null ? pickStr(f, 'angajat_idnp') : p.angajat_idnp,
+      functie: f.functie != null ? pickStr(f, 'functie') : p.functie,
+      salariu_brut: f.salariu_brut != null ? String(pickNum(f, 'salariu_brut', 0)) : p.salariu_brut,
+      zile_lucrate: f.zile_lucrate != null ? String(pickNum(f, 'zile_lucrate', 22)) : p.zile_lucrate,
+      angajator: f.angajator != null ? pickStr(f, 'angajator') : p.angajator,
+    }));
+  }
+
   return (
     <div>
       <h2 className="text-xl font-bold mb-4">💼 Stat de plata <span className="text-xs font-normal text-neutral-500">(calcul automat IVS 12% + CAS 6% + CAM 9%)</span></h2>
+      <AIPromptBar
+        formType="stat_plata"
+        placeholder="ex: stat plata aprilie 2026 pentru Maria Ionescu, contabil la Compania Mea SRL, brut 12000 MDL"
+        onResult={applyAi}
+      />
       <div className="grid grid-cols-2 gap-3">
         <Field label="Luna *" value={d.luna} onChange={set('luna')} placeholder="Aprilie 2026" />
         <Field label="Angajator *" value={d.angajator} onChange={set('angajator')} placeholder="Compania mea SRL" />
@@ -345,9 +431,37 @@ function FormAviz() {
     } catch (e) { setErr(e instanceof Error ? e.message : 'Eroare'); } finally { setBusy(false); }
   }
 
+  function applyAi(f: Record<string, unknown>) {
+    setD((p) => ({
+      ...p,
+      numar: f.numar != null ? pickStr(f, 'numar', p.numar) : p.numar,
+      data: f.data != null ? pickStr(f, 'data', p.data) : p.data,
+      expeditor: f.expeditor != null ? pickStr(f, 'expeditor') : p.expeditor,
+      destinatar: f.destinatar != null ? pickStr(f, 'destinatar') : p.destinatar,
+      transport: f.transport != null ? pickStr(f, 'transport') : p.transport,
+    }));
+    if (Array.isArray(f.items) && f.items.length > 0) {
+      const mapped: FacturaItem[] = (f.items as unknown[]).map((it) => {
+        const o = (it && typeof it === 'object' ? it : {}) as Record<string, unknown>;
+        return {
+          denumire: pickStr(o, 'denumire'),
+          cantitate: pickNum(o, 'cantitate', 1),
+          pret_unitar: pickNum(o, 'pret_unitar', 0),
+          cota_tva: pickNum(o, 'cota_tva', 0),
+        };
+      });
+      setItems(mapped);
+    }
+  }
+
   return (
     <div>
       <h2 className="text-xl font-bold mb-4">📦 Aviz de insotire a marfii</h2>
+      <AIPromptBar
+        formType="aviz"
+        placeholder="ex: aviz de la Compania Mea SRL catre Beta Trade SRL, 50 cutii ambalaj, auto MD-CD-123"
+        onResult={applyAi}
+      />
       <div className="grid grid-cols-3 gap-3">
         <Field label="Numar *" value={d.numar} onChange={set('numar')} />
         <Field label="Data *" value={d.data} onChange={set('data')} type="date" />
@@ -391,9 +505,28 @@ function FormOrdinPlata() {
     } catch (e) { setErr(e instanceof Error ? e.message : 'Eroare'); } finally { setBusy(false); }
   }
 
+  function applyAi(f: Record<string, unknown>) {
+    setD((p) => ({
+      ...p,
+      numar: f.numar != null ? pickStr(f, 'numar', p.numar) : p.numar,
+      data: f.data != null ? pickStr(f, 'data', p.data) : p.data,
+      platitor: f.platitor != null ? pickStr(f, 'platitor') : p.platitor,
+      platitor_cont: f.platitor_cont != null ? pickStr(f, 'platitor_cont') : p.platitor_cont,
+      beneficiar: f.beneficiar != null ? pickStr(f, 'beneficiar') : p.beneficiar,
+      beneficiar_cont: f.beneficiar_cont != null ? pickStr(f, 'beneficiar_cont') : p.beneficiar_cont,
+      suma: f.suma != null ? String(pickNum(f, 'suma', 0)) : p.suma,
+      detalii_plata: f.detalii_plata != null ? pickStr(f, 'detalii_plata') : p.detalii_plata,
+    }));
+  }
+
   return (
     <div>
       <h2 className="text-xl font-bold mb-4">💳 Ordin de plata bancara</h2>
+      <AIPromptBar
+        formType="ordin_plata"
+        placeholder="ex: plata 5000 MDL de la Compania Mea SRL catre Beta Trade SRL pentru factura FA-001"
+        onResult={applyAi}
+      />
       <div className="grid grid-cols-2 gap-3">
         <Field label="Numar *" value={d.numar} onChange={set('numar')} />
         <Field label="Data *" value={d.data} onChange={set('data')} type="date" />
@@ -556,6 +689,75 @@ function ServicePlanConturi() {
       </div>
     </div>
   );
+}
+
+// ==================================
+// === AI Prompt Bar (auto-fill) ====
+// ==================================
+function AIPromptBar({
+  formType,
+  placeholder,
+  onResult,
+}: {
+  formType: GeneratorFormType;
+  placeholder: string;
+  onResult: (fields: Record<string, unknown>) => void;
+}) {
+  const [prompt, setPrompt] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function trimite() {
+    if (!prompt.trim()) return;
+    setBusy(true); setErr(null);
+    try {
+      const r = await aiGenerateForm(formType, prompt.trim());
+      onResult(r.fields);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Eroare AI');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-lg p-3 mb-4">
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-xs font-bold text-indigo-800">✨ Completare automata cu AI</span>
+        <span className="text-[10px] text-indigo-600">(Djarvis — local, fara internet)</span>
+      </div>
+      <div className="flex gap-2">
+        <input
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          placeholder={placeholder}
+          disabled={busy}
+          onKeyDown={(e) => { if (e.key === 'Enter') trimite(); }}
+          className="flex-1 border border-indigo-200 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400 disabled:opacity-60"
+        />
+        <button
+          onClick={trimite}
+          disabled={busy || !prompt.trim()}
+          className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-md disabled:opacity-50 whitespace-nowrap"
+        >
+          {busy ? '⏳ AI lucreaza...' : '✨ Genereaza'}
+        </button>
+      </div>
+      {err && <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-md p-2 mt-2">{err}</div>}
+    </div>
+  );
+}
+
+function pickStr(o: Record<string, unknown>, k: string, fb = ''): string {
+  const v = o[k];
+  if (v === null || v === undefined) return fb;
+  return typeof v === 'string' ? v : String(v);
+}
+function pickNum(o: Record<string, unknown>, k: string, fb = 0): number {
+  const v = o[k];
+  if (v === null || v === undefined || v === '') return fb;
+  const n = typeof v === 'number' ? v : parseFloat(String(v));
+  return Number.isFinite(n) ? n : fb;
 }
 
 // ==================================

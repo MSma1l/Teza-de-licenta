@@ -11,8 +11,10 @@ foloseasca fallback-ul FAQ.
 """
 from __future__ import annotations
 
+import json
 import re
-from typing import Literal
+from datetime import date as _date
+from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
@@ -213,5 +215,205 @@ async def ask(cerere: CerereIntrebare):
             for c in chunks
         ],
         used_rag=len(chunks) > 0,
+        model=OLLAMA_MODEL,
+    )
+
+
+# ============================================
+# === Auto-fill formulare generator (LLM JSON) ===============
+# ============================================
+
+FormType = Literal[
+    "factura", "chitanta", "contract", "stat_plata", "aviz", "ordin_plata",
+]
+
+# Schemele descrise in limbaj natural pentru LLM — ii spunem ce campuri sa scoata,
+# in ce format si exemple. Modelul intoarce JSON strict (vezi prompt-ul).
+_FORM_SCHEMAS: dict[str, dict[str, Any]] = {
+    "factura": {
+        "descriere": "Factura fiscala pentru un client (factura de vanzare).",
+        "campuri": {
+            "serie": "string scurt, prefix de serie. Default 'FA'.",
+            "numar": "string numeric, numar factura. Ex: '001'.",
+            "data": "data emiterii in format YYYY-MM-DD. Daca nu e specificat, foloseste data de azi.",
+            "vendor_nume": "denumire furnizor (cel care emite). Ex: 'Compania Mea SRL'.",
+            "vendor_cui": "IDNO/CUI furnizor (13 cifre).",
+            "vendor_adresa": "adresa furnizor.",
+            "client_nume": "denumire cumparator. OBLIGATORIU.",
+            "client_cui": "IDNO cumparator (13 cifre) sau gol daca persoana fizica.",
+            "client_adresa": "adresa cumparator sau gol.",
+            "items": "array de articole. Fiecare element: {denumire: string, cantitate: number, pret_unitar: number, cota_tva: number}. Cota TVA standard RM = 20. Cota redusa = 8.",
+            "note": "note suplimentare, opt.",
+        },
+        "exemplu": {
+            "serie": "FA", "numar": "001", "data": "2026-05-18",
+            "vendor_nume": "Compania Mea SRL", "vendor_cui": "1010600000000",
+            "vendor_adresa": "mun. Chisinau, str. Stefan cel Mare 1",
+            "client_nume": "Beta Trade SRL", "client_cui": "1003600123456",
+            "client_adresa": "mun. Balti, str. Independentei 25",
+            "items": [
+                {"denumire": "Servicii consultanta IT", "cantitate": 1, "pret_unitar": 5000, "cota_tva": 20}
+            ],
+            "note": "",
+        },
+    },
+    "chitanta": {
+        "descriere": "Chitanta de incasare numerar.",
+        "campuri": {
+            "numar": "numar chitanta. Ex: '001'.",
+            "data": "data emiterii YYYY-MM-DD.",
+            "suma": "suma incasata in MDL (numar).",
+            "de_la": "numele platitorului (cine a platit). OBLIGATORIU.",
+            "pentru": "motivul incasarii (ce s-a platit). OBLIGATORIU.",
+        },
+        "exemplu": {"numar": "001", "data": "2026-05-18", "suma": 1500, "de_la": "Ion Popescu", "pentru": "Servicii consultanta luna mai"},
+    },
+    "contract": {
+        "descriere": "Contract de prestari servicii intre doua parti.",
+        "campuri": {
+            "numar": "numar contract.",
+            "data": "data semnarii YYYY-MM-DD.",
+            "parte_a_nume": "Prestator (cel care presteaza servicii). OBLIGATORIU.",
+            "parte_a_cui": "IDNO prestator. OBLIGATORIU.",
+            "parte_b_nume": "Beneficiar. OBLIGATORIU.",
+            "parte_b_cui": "IDNO beneficiar sau gol.",
+            "obiect": "obiectul contractului (ce servicii). OBLIGATORIU.",
+            "valoare": "valoare contract in MDL (numar). OBLIGATORIU.",
+            "durata": "durata contractului. Default '12 luni'.",
+            "clauze_extra": "clauze suplimentare, opt.",
+        },
+        "exemplu": {"numar": "001", "data": "2026-05-18", "parte_a_nume": "Compania Mea SRL", "parte_a_cui": "1010600000000", "parte_b_nume": "Beta Trade SRL", "parte_b_cui": "1003600123456", "obiect": "Servicii consultanta contabila lunare", "valoare": 60000, "durata": "12 luni", "clauze_extra": ""},
+    },
+    "stat_plata": {
+        "descriere": "Stat de plata salariu pentru un angajat (calcul fiscal automat IVS 12% + CAS 6% + CAM 9%).",
+        "campuri": {
+            "luna": "luna stat plata. Ex: 'Aprilie 2026'.",
+            "angajat_nume": "numele complet al angajatului. OBLIGATORIU.",
+            "angajat_idnp": "IDNP angajat (13 cifre) sau gol.",
+            "functie": "functia. OBLIGATORIU.",
+            "salariu_brut": "salariu brut MDL (numar).",
+            "zile_lucrate": "zile lucrate in luna (int). Default 22.",
+            "angajator": "denumire angajator. OBLIGATORIU.",
+        },
+        "exemplu": {"luna": "Aprilie 2026", "angajat_nume": "Maria Ionescu", "angajat_idnp": "2005001234567", "functie": "Contabil", "salariu_brut": 12000, "zile_lucrate": 22, "angajator": "Compania Mea SRL"},
+    },
+    "aviz": {
+        "descriere": "Aviz de insotire a marfii (transport bunuri).",
+        "campuri": {
+            "numar": "numar aviz.",
+            "data": "data emiterii YYYY-MM-DD.",
+            "expeditor": "denumire expeditor. OBLIGATORIU.",
+            "destinatar": "denumire destinatar. OBLIGATORIU.",
+            "transport": "nr auto / detalii transport (opt).",
+            "items": "array de articole [{denumire, cantitate, pret_unitar=0, cota_tva=0}]. Pretul nu e relevant pe aviz.",
+        },
+        "exemplu": {"numar": "001", "data": "2026-05-18", "expeditor": "Compania Mea SRL", "destinatar": "Beta Trade SRL", "transport": "MD-CD-123", "items": [{"denumire": "Cutii ambalaj", "cantitate": 50, "pret_unitar": 0, "cota_tva": 0}]},
+    },
+    "ordin_plata": {
+        "descriere": "Ordin de plata bancara (transfer bancar).",
+        "campuri": {
+            "numar": "numar ordin.",
+            "data": "data emiterii YYYY-MM-DD.",
+            "platitor": "denumire platitor. OBLIGATORIU.",
+            "platitor_cont": "IBAN platitor (incepe cu MD).",
+            "beneficiar": "denumire beneficiar. OBLIGATORIU.",
+            "beneficiar_cont": "IBAN beneficiar (incepe cu MD).",
+            "suma": "suma MDL (numar).",
+            "detalii_plata": "detalii / scop plata. OBLIGATORIU.",
+        },
+        "exemplu": {"numar": "001", "data": "2026-05-18", "platitor": "Compania Mea SRL", "platitor_cont": "MD24EX0000000000000123456", "beneficiar": "Beta Trade SRL", "beneficiar_cont": "MD24EX0000000000000654321", "suma": 5000, "detalii_plata": "Plata factura FA-001 din 2026-05-10"},
+    },
+}
+
+
+class GenerateFormRequest(BaseModel):
+    form_type: FormType
+    prompt: str = Field(min_length=3, max_length=2000)
+
+
+class GenerateFormResponse(BaseModel):
+    form_type: str
+    fields: dict[str, Any]
+    used_prompt: str
+    model: str
+
+
+_JSON_BLOCK = re.compile(r"\{[\s\S]*\}")
+
+
+def _extrage_json(text: str) -> dict[str, Any]:
+    """Extrage primul bloc JSON dintr-un text. Tolereaza markdown si text in jur."""
+    if not text:
+        raise ValueError("Raspuns gol de la LLM")
+    # Curatam fence-uri Markdown daca exista (```json ... ```)
+    t = text.strip()
+    if t.startswith("```"):
+        t = re.sub(r"^```(?:json)?\s*", "", t)
+        t = re.sub(r"\s*```\s*$", "", t)
+    m = _JSON_BLOCK.search(t)
+    if not m:
+        raise ValueError(f"Nu am gasit JSON valid in raspunsul LLM: {text[:200]}")
+    return json.loads(m.group(0))
+
+
+@router.post("/generate-form", response_model=GenerateFormResponse)
+async def generate_form(cerere: GenerateFormRequest):
+    """
+    Primeste un prompt in limbaj natural si tipul formularului, intoarce
+    JSON cu campurile populate. Folosit de Generatorul de documente din UI:
+    user-ul scrie 'fa-mi o factura catre X SRL pe 5000 MDL servicii IT',
+    LLM-ul extrage structura, frontend-ul populeaza formularul.
+    """
+    if not await model_disponibil():
+        raise HTTPException(
+            status_code=503,
+            detail="Modelul Ollama nu e pregatit (pull in curs sau container oprit).",
+        )
+
+    schema = _FORM_SCHEMAS.get(cerere.form_type)
+    if not schema:
+        raise HTTPException(status_code=400, detail=f"form_type necunoscut: {cerere.form_type}")
+
+    azi = _date.today().isoformat()
+
+    sys_prompt = (
+        "Esti un asistent care extrage date structurate pentru completarea automata "
+        "a unui formular contabil din Republica Moldova. Raspunzi DOAR cu un obiect JSON valid, "
+        "fara comentarii, fara markdown, fara explicatii. Daca un camp nu e specificat de user, "
+        "foloseste o valoare implicita rezonabila (ex: data = azi, cota TVA = 20, durata = '12 luni'). "
+        f"Data de azi: {azi}. Toate sumele sunt in MDL. IDNO are 13 cifre."
+    )
+
+    user_prompt = (
+        f"Tip document: {cerere.form_type}\n"
+        f"Descriere: {schema['descriere']}\n\n"
+        "Schema (cheie: descriere):\n"
+        + "\n".join(f"  - {k}: {v}" for k, v in schema["campuri"].items())
+        + "\n\nExemplu format raspuns:\n"
+        + json.dumps(schema["exemplu"], ensure_ascii=False, indent=2)
+        + f"\n\nCererea utilizatorului:\n\"{cerere.prompt}\"\n\n"
+        "Raspuns (DOAR JSON, fara nimic in plus):"
+    )
+
+    try:
+        text = await genereaza(sys_prompt, user_prompt, temperatura=0.15, max_tokens=800)
+    except Exception as e:
+        logger.error(f"Ollama generate-form failed: {e}")
+        raise HTTPException(status_code=502, detail=f"Generare esuata: {e}")
+
+    try:
+        fields = _extrage_json(text)
+    except (ValueError, json.JSONDecodeError) as e:
+        logger.warning(f"LLM a returnat JSON invalid pentru {cerere.form_type}: {text[:300]}")
+        raise HTTPException(
+            status_code=502,
+            detail=f"AI-ul nu a returnat date valide. Incearca din nou cu un prompt mai clar. ({e})",
+        )
+
+    from app.agent.ollama_client import OLLAMA_MODEL
+    return GenerateFormResponse(
+        form_type=cerere.form_type,
+        fields=fields,
+        used_prompt=cerere.prompt,
         model=OLLAMA_MODEL,
     )
