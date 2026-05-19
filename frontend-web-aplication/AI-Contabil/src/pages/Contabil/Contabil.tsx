@@ -557,10 +557,6 @@ function TabSolicitari() {
     setTrimitere(true);
     setFeedback(null);
     try {
-      // Endpoint backend pentru trimitere notificare directa nu exista public,
-      // asa ca apelam un endpoint generic POST notification (placeholder).
-      // Daca backend-ul nu accepta inca, mesajul ramane local.
-      // (Pentru implementare completa: adauga POST /notifications/ in backend.)
       const res = await fetch('/api/v1/ac/notifications/', {
         method: 'POST',
         credentials: 'include',
@@ -576,14 +572,24 @@ function TabSolicitari() {
         }),
       });
       if (res.ok) {
-        setFeedback('Solicitarea a fost trimisa clientului.');
+        setFeedback('Solicitarea a fost trimisa clientului. Va vedea notificarea in centrul de notificari.');
         setTitlu('');
         setMesaj('');
       } else {
-        setFeedback('Backend-ul inca nu accepta crearea de notificari prin API. Ele sunt generate doar de sistem la evenimente.');
+        // Aratam eroarea reala de la backend (auth/permisiune/validare/etc.),
+        // nu un mesaj generic. POST /notifications/ functioneaza — daca esueaza,
+        // userul trebuie sa vada cauza concreta.
+        let detaliu = `HTTP ${res.status}`;
+        try {
+          const errJson = await res.json();
+          if (errJson?.detail) detaliu = typeof errJson.detail === 'string' ? errJson.detail : JSON.stringify(errJson.detail);
+        } catch {
+          /* raspuns non-JSON */
+        }
+        setFeedback(`Trimitere esuata: ${detaliu}`);
       }
     } catch (e) {
-      setFeedback(e instanceof Error ? e.message : 'Eroare trimitere');
+      setFeedback(e instanceof Error ? `Eroare retea: ${e.message}` : 'Eroare trimitere');
     } finally {
       setTrimitere(false);
     }

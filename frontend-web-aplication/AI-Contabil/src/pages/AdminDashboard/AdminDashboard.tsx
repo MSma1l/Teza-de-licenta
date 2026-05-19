@@ -24,12 +24,15 @@ import {
   fetchTopContabili,
   fetchSystemHealth,
   fetchAuditLog,
+  fetchAgentsOverview,
   type UsersByRole,
   type DocumentsStats,
   type DocumentsTimeseries,
   type TopContabil,
   type SystemHealth,
   type AuditLogEntry,
+  type AgentsOverview,
+  type AIAgent,
 } from '../../api/adminDashboardApi';
 import { fetchTrainingStats, type TrainingStats } from '../../api/trainingApi';
 
@@ -86,6 +89,7 @@ const AdminDashboard = () => {
   const [training, setTraining] = useState<TrainingStats | null>(null);
   const [health, setHealth] = useState<SystemHealth | null>(null);
   const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
+  const [agents, setAgents] = useState<AgentsOverview | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -106,6 +110,7 @@ const AdminDashboard = () => {
       safe(fetchTrainingStats().then((d) => { if (mounted) setTraining(d); }), 'training'),
       safe(fetchSystemHealth().then((d) => { if (mounted) setHealth(d); }), 'health'),
       safe(fetchAuditLog(5).then((d) => { if (mounted) setAuditLog(d); }), 'audit'),
+      safe(fetchAgentsOverview().then((d) => { if (mounted) setAgents(d); }), 'agents'),
     ];
 
     function collect(key: string, e: unknown) {
@@ -202,9 +207,15 @@ const AdminDashboard = () => {
           />
           <StatCard
             icon={<ModelTrainingOutlinedIcon />}
-            label="Modele AI active"
-            value={training?.active_models?.length ?? '—'}
-            sub={training ? `${training.processed_documents} documente procesate` : ''}
+            label="Agenti AI"
+            value={agents ? `${agents.summary.online}/${agents.summary.total}` : '—'}
+            sub={
+              agents
+                ? `${agents.summary.ml_models_active} ML antrenat${agents.summary.ml_models_active === 1 ? '' : 'e'} · ${agents.summary.degraded} degradat${agents.summary.degraded === 1 ? '' : 'e'}`
+                : training
+                  ? `${training.processed_documents} documente procesate`
+                  : ''
+            }
             tone="violet"
           />
           <StatCard
@@ -361,44 +372,101 @@ const AdminDashboard = () => {
           </Card>
         </div>
 
-        {/* === ROW 5 — AI Models === */}
-        <Card title="Modele AI active" icon={<ModelTrainingOutlinedIcon className="text-neutral-700" />}>
-          {training?.active_models && training.active_models.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-neutral-50 border-b border-neutral-200">
-                  <tr>
-                    <th className="text-left px-3 py-2 font-semibold text-neutral-700">Model</th>
-                    <th className="text-left px-3 py-2 font-semibold text-neutral-700">Versiune</th>
-                    <th className="text-left px-3 py-2 font-semibold text-neutral-700">Acuratete</th>
-                    <th className="text-left px-3 py-2 font-semibold text-neutral-700">Exemple</th>
-                    <th className="text-left px-3 py-2 font-semibold text-neutral-700">Antrenat</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {training.active_models.map((m) => {
-                    const acc = m.accuracy
-                      ? Object.values(m.accuracy)[0]
-                      : null;
-                    return (
-                      <tr key={`${m.name}-${m.version}`} className="border-b border-neutral-100 last:border-0">
-                        <td className="px-3 py-2 font-medium text-neutral-900">{m.name}</td>
-                        <td className="px-3 py-2 text-neutral-700">{m.version}</td>
-                        <td className="px-3 py-2 text-neutral-700">
-                          {acc !== null ? `${(acc * 100).toFixed(1)}%` : '—'}
-                        </td>
-                        <td className="px-3 py-2 text-neutral-700">{m.dataset_size}</td>
-                        <td className="px-3 py-2 text-neutral-500 text-xs">
-                          {m.training_date ? new Date(m.training_date).toLocaleDateString('ro') : '—'}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+        {/* === ROW 5 — AI Agents (toti 6) === */}
+        <Card
+          title="Agenti AI ai aplicatiei"
+          icon={<ModelTrainingOutlinedIcon className="text-neutral-700" />}
+        >
+          {agents && agents.agents.length > 0 ? (
+            <div>
+              {/* Summary pill bar */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  {agents.summary.online} online
+                </span>
+                {agents.summary.degraded > 0 && (
+                  <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
+                    <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                    {agents.summary.degraded} degradat
+                  </span>
+                )}
+                {agents.summary.offline > 0 && (
+                  <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">
+                    <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                    {agents.summary.offline} offline
+                  </span>
+                )}
+                <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-violet-100 text-violet-700">
+                  {agents.summary.ml_models_active} cu model ML antrenat
+                </span>
+              </div>
+
+              {/* Grid 6 agenti */}
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                {agents.agents.map((a: AIAgent) => (
+                  <div
+                    key={a.id}
+                    className="border border-neutral-200 rounded-xl p-4 bg-white hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-neutral-900 truncate">{a.name}</div>
+                        <div className="text-xs text-neutral-500 mt-0.5">{a.kind}</div>
+                      </div>
+                      <AgentStatusBadge status={a.status} />
+                    </div>
+                    <p className="text-xs text-neutral-600 leading-relaxed mb-2">{a.description}</p>
+                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-neutral-100">
+                      <span className="text-[11px] text-neutral-500 font-mono truncate">{a.tech}</span>
+                      <ModeBadge mode={a.mode} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Optional: training history table — only if there are fine-tuned versions */}
+              {training?.active_models && training.active_models.length > 0 && (
+                <details className="mt-4 group">
+                  <summary className="cursor-pointer text-xs font-semibold text-neutral-600 hover:text-neutral-900 select-none">
+                    Versiuni modele fine-tuned ({training.active_models.length})
+                  </summary>
+                  <div className="overflow-x-auto mt-2 border border-neutral-200 rounded-lg">
+                    <table className="w-full text-sm">
+                      <thead className="bg-neutral-50 border-b border-neutral-200">
+                        <tr>
+                          <th className="text-left px-3 py-2 font-semibold text-neutral-700">Model</th>
+                          <th className="text-left px-3 py-2 font-semibold text-neutral-700">Versiune</th>
+                          <th className="text-left px-3 py-2 font-semibold text-neutral-700">Acuratete</th>
+                          <th className="text-left px-3 py-2 font-semibold text-neutral-700">Exemple</th>
+                          <th className="text-left px-3 py-2 font-semibold text-neutral-700">Antrenat</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {training.active_models.map((m) => {
+                          const acc = m.accuracy ? Object.values(m.accuracy)[0] : null;
+                          return (
+                            <tr key={`${m.name}-${m.version}`} className="border-b border-neutral-100 last:border-0">
+                              <td className="px-3 py-2 font-medium text-neutral-900">{m.name}</td>
+                              <td className="px-3 py-2 text-neutral-700">{m.version}</td>
+                              <td className="px-3 py-2 text-neutral-700">
+                                {acc !== null ? `${(acc * 100).toFixed(1)}%` : '—'}
+                              </td>
+                              <td className="px-3 py-2 text-neutral-700">{m.dataset_size}</td>
+                              <td className="px-3 py-2 text-neutral-500 text-xs">
+                                {m.training_date ? new Date(m.training_date).toLocaleDateString('ro') : '—'}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </details>
+              )}
             </div>
-          ) : errors.training ? (
-            <ErrorBox msg={errors.training} />
+          ) : errors.agents ? (
+            <ErrorBox msg={errors.agents} />
           ) : (
             <Empty />
           )}
@@ -472,6 +540,37 @@ function ErrorBox({ msg }: { msg: string }) {
     <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-2">
       {msg}
     </div>
+  );
+}
+
+function AgentStatusBadge({ status }: { status: AIAgent['status'] }) {
+  const map = {
+    online: { dot: 'bg-emerald-500', bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'Online' },
+    degraded: { dot: 'bg-amber-500', bg: 'bg-amber-50', text: 'text-amber-700', label: 'Degradat' },
+    offline: { dot: 'bg-red-500', bg: 'bg-red-50', text: 'text-red-700', label: 'Offline' },
+  } as const;
+  const s = map[status];
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold ${s.bg} ${s.text} shrink-0`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`}></span>
+      {s.label}
+    </span>
+  );
+}
+
+function ModeBadge({ mode }: { mode: AIAgent['mode'] }) {
+  const map: Record<AIAgent['mode'], { bg: string; text: string; label: string }> = {
+    ml: { bg: 'bg-violet-100', text: 'text-violet-700', label: 'ML' },
+    llm: { bg: 'bg-indigo-100', text: 'text-indigo-700', label: 'LLM' },
+    ocr: { bg: 'bg-cyan-100', text: 'text-cyan-700', label: 'OCR' },
+    fallback: { bg: 'bg-amber-100', text: 'text-amber-700', label: 'Fallback' },
+    'rule-based': { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Reguli' },
+  };
+  const m = map[mode];
+  return (
+    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${m.bg} ${m.text} shrink-0`}>
+      {m.label}
+    </span>
   );
 }
 

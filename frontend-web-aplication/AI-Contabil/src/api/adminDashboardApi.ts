@@ -77,6 +77,33 @@ export const fetchSystemHealth = () =>
 export const fetchAuditLog = (limit = 5) =>
   apiRequest<AuditLogEntry[]>(`/admin/dashboard/audit-log?limit=${limit}`);
 
+// === AI Agents Overview — toti cei 6 agenti AI ai aplicatiei ===
+
+export interface AIAgent {
+  id: string;
+  name: string;
+  kind: string;
+  tech: string;
+  status: 'online' | 'degraded' | 'offline';
+  mode: 'ml' | 'fallback' | 'rule-based' | 'llm' | 'ocr';
+  description: string;
+  details?: Record<string, unknown>;
+}
+
+export interface AgentsOverview {
+  agents: AIAgent[];
+  summary: {
+    total: number;
+    online: number;
+    degraded: number;
+    offline: number;
+    ml_models_active: number;
+  };
+}
+
+export const fetchAgentsOverview = () =>
+  aiServiceRequest<AgentsOverview>('/agents/overview');
+
 // === AI service training & audit actions ===
 
 export interface TrainingTriggerResponse {

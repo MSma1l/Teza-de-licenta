@@ -115,6 +115,7 @@ from app.api.routes.training import router as training_router
 from app.api.routes.reports import router as reports_router
 from app.api.routes.admin import router as admin_router
 from app.api.routes.agent import router as agent_router
+from app.api.routes.agents import router as agents_router
 
 app.include_router(documents_router, prefix="/api/v1")
 app.include_router(queue_router, prefix="/api/v1")
@@ -122,6 +123,7 @@ app.include_router(training_router, prefix="/api/v1")
 app.include_router(reports_router, prefix="/api/v1")
 app.include_router(admin_router, prefix="/api/v1")
 app.include_router(agent_router, prefix="/api/v1")
+app.include_router(agents_router, prefix="/api/v1")
 
 
 # === WebSocket Endpoints ===
